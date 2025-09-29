@@ -27,6 +27,7 @@ export interface TransformationOptions {
   dryRun?: boolean;
   verbose?: boolean;
   backup?: boolean;
+  version?: any; // For migration version
 }
 
 export interface TransformationResult {
@@ -81,7 +82,7 @@ export class SchemaTransformer {
     try {
       switch (options.type) {
         case 'bridge':
-          result.output = await this.bridge(input, options);
+          result.output = await this.bridge(input as any, options);
           break;
         case 'compose':
           result.output = await this.compose(input as z.ZodTypeAny[], options);
@@ -135,7 +136,7 @@ export class SchemaTransformer {
   /**
    * Compose - Combine multiple schemas
    */
-  private async compose(
+  protected async compose(
     schemas: z.ZodTypeAny[],
     options: TransformationOptions
   ): Promise<z.ZodTypeAny> {
@@ -166,7 +167,7 @@ export class SchemaTransformer {
   /**
    * Migrate - Handle schema version migrations
    */
-  private async migrate(
+  protected async migrate(
     schema: z.ZodTypeAny,
     options: TransformationOptions
   ): Promise<z.ZodTypeAny> {
@@ -194,7 +195,7 @@ export class SchemaTransformer {
   /**
    * Refactor - Improve schema structure
    */
-  private async refactor(
+  protected async refactor(
     schema: z.ZodTypeAny,
     options: TransformationOptions
   ): Promise<z.ZodTypeAny> {
@@ -267,7 +268,7 @@ export class SchemaTransformer {
     description: string;
     apply: (schema: z.ZodTypeAny) => z.ZodTypeAny;
   }> {
-    const refactorings = [];
+    const refactorings: Array<{ description: string; apply: (schema: z.ZodTypeAny) => z.ZodTypeAny }> = [];
 
     // Check for common improvements
     if (this.hasLooseValidation(schema)) {
@@ -289,7 +290,7 @@ export class SchemaTransformer {
 
   private hasLooseValidation(schema: z.ZodTypeAny): boolean {
     // Check if schema has loose validation
-    return schema._def.typeName === z.ZodFirstPartyTypeKind.ZodAny;
+    return (schema._def as any).typeName === 'ZodAny';
   }
 
   private hasDuplicateLogic(schema: z.ZodTypeAny): boolean {
@@ -380,8 +381,8 @@ export class SchemaComposer extends SchemaTransformer {
 }
 
 export class SchemaMigration extends SchemaTransformer {
-  async migrate(schema: z.ZodTypeAny, version: string): Promise<z.ZodTypeAny> {
-    const result = await this.transform(schema, { type: 'migrate' });
+  async migrateToVersion(schema: z.ZodTypeAny, version: string): Promise<z.ZodTypeAny> {
+    const result = await this.transform(schema, { type: 'migrate', version: version as any });
     return result.output as z.ZodTypeAny;
   }
 }

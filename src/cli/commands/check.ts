@@ -100,7 +100,7 @@ ${schemas.map(s => `  • ${s.name} (${s.filePath})`).join('\n')}`,
     const parallelResults = await infra.parallel.processSchemas(
       targetSchemas,
       async (schema) => {
-        const result = await analyzer.analyze(schema, {
+        const result = await analyzer.analyze(schema as any, {
           mode: 'rules', // Focus on rule validation for speed
           strict: true
         });

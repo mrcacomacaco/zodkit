@@ -39,28 +39,52 @@ const UnifiedConfigSchema = z.object({
     'use-efficient-transforms': z.enum(['error', 'warn', 'off']).default('warn'),
     'no-eval-in-schemas': z.enum(['error', 'warn', 'off']).default('error'),
     'no-prototype-pollution': z.enum(['error', 'warn', 'off']).default('error')
-  }).default({}),
+  }).optional().default({
+    'require-validation': 'error',
+    'no-any-types': 'error',
+    'no-empty-schema': 'error',
+    'validate-external-data': 'error',
+    'prefer-strict-schemas': 'warn',
+    'use-descriptive-names': 'warn',
+    'no-unused-schemas': 'warn',
+    'prefer-specific-types': 'warn',
+    'no-expensive-parsing': 'warn',
+    'use-efficient-transforms': 'warn',
+    'no-eval-in-schemas': 'error',
+    'no-prototype-pollution': 'error'
+  }),
 
   // Targets (from ConfigManager)
   targets: z.object({
     api: z.array(z.string()).default(['./pages/api/**/*.ts', './src/api/**/*.ts']),
     components: z.array(z.string()).default(['./components/**/*.tsx', './src/**/*.tsx']),
     content: z.array(z.string()).default(['./content/**/*.mdx'])
-  }).default({}),
+  }).optional().default({
+    api: ['./pages/api/**/*.ts', './src/api/**/*.ts'],
+    components: ['./components/**/*.tsx', './src/**/*.tsx'],
+    content: ['./content/**/*.mdx']
+  }),
 
   // Output (from ConfigManager)
   output: z.object({
     format: z.enum(['pretty', 'json', 'junit', 'sarif']).default('pretty'),
     file: z.string().optional(),
     verbose: z.boolean().default(false)
-  }).default({}),
+  }).optional().default({
+    format: 'pretty',
+    verbose: false
+  }),
 
   // Infrastructure Settings (from Infrastructure)
   cache: z.object({
     enabled: z.boolean().default(true),
     ttl: z.number().default(3600000), // 1 hour
     directory: z.string().default('.zodkit/cache')
-  }).default({}),
+  }).optional().default({
+    enabled: true,
+    ttl: 3600000,
+    directory: '.zodkit/cache'
+  }),
 
   discovery: z.object({
     patterns: z.array(z.string()).default([
@@ -78,7 +102,23 @@ const UnifiedConfigSchema = z.object({
       'coverage/**'
     ]),
     depth: z.number().default(10)
-  }).default({}),
+  }).optional().default({
+    patterns: [
+      '**/*.schema.ts',
+      '**/*schema.ts',
+      '**/*.zod.ts',
+      '**/schemas/**/*.ts',
+      '**/types/**/*.ts',
+      '**/models/**/*.ts'
+    ],
+    exclude: [
+      'node_modules/**',
+      'dist/**',
+      '.git/**',
+      'coverage/**'
+    ],
+    depth: 10
+  }),
 
   parallel: z.object({
     workers: z.number().default(4),
@@ -236,12 +276,13 @@ export class UnifiedConfigManager {
           'use-descriptive-names': 'warn' as const,
           'no-unused-schemas': 'warn' as const,
           'prefer-specific-types': 'warn' as const,
+          'no-expensive-parsing': 'warn' as const,
+          'use-efficient-transforms': 'warn' as const,
           'no-eval-in-schemas': 'error' as const,
-          'no-prototype-pollution': 'error' as const,
-          'require-return-type': 'warn' as const
+          'no-prototype-pollution': 'error' as const
         },
-        cache: { enabled: false },
-        monitoring: { enabled: false }
+        cache: { enabled: false, ttl: 3600000, directory: '.zodkit/cache' },
+        monitoring: { enabled: false, interval: 60000, metrics: ['memory', 'cpu', 'schemas'] }
       },
 
       standard: UnifiedConfigSchema.parse({}),
@@ -270,7 +311,7 @@ export class UnifiedConfigManager {
       }
     };
 
-    return presets[preset];
+    return presets[preset] as any;
   }
 }
 

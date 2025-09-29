@@ -48,21 +48,21 @@ const ConfigSchema = z.object({
     // Security rules
     'no-eval-in-schemas': RuleSeverity.default('error'),
     'no-prototype-pollution': RuleSeverity.default('error')
-  }).default({}),
+  }).optional(),
 
   // Target patterns for different file types
   targets: z.object({
     api: z.array(z.string()).default(['./pages/api/**/*.ts', './src/api/**/*.ts']),
     components: z.array(z.string()).default(['./components/**/*.tsx', './src/**/*.tsx']),
     content: z.array(z.string()).default(['./content/**/*.mdx'])
-  }).default({}),
+  }).optional(),
 
   // Output and reporting settings
   output: z.object({
     format: z.enum(['pretty', 'json', 'junit', 'sarif']).default('pretty'),
     file: z.string().optional(),
     verbose: z.boolean().default(false)
-  }).default({})
+  }).optional()
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -90,7 +90,7 @@ export class ConfigManager {
       try {
         const configModule = await import(configFile);
         userConfig = configModule.default || configModule;
-      } catch (error) {
+      } catch {
         console.warn(`Warning: Could not load config from ${configFile}`);
       }
     }
@@ -147,18 +147,22 @@ export class ConfigManager {
         };
 
       case 'recommended':
-        return ConfigSchema.parse({}).rules;
+        return (ConfigSchema.parse({}) as any).rules || {};
 
       case 'minimal':
         return {
-          rules: {
-            'require-validation': 'error',
-            'no-any-types': 'warn',
-            'validate-external-data': 'error',
-            'no-eval-in-schemas': 'error',
-            'no-prototype-pollution': 'error'
-          }
-        };
+          'require-validation': 'error' as const,
+          'no-any-types': 'warn' as const,
+          'validate-external-data': 'error' as const,
+          'no-eval-in-schemas': 'error' as const,
+          'no-prototype-pollution': 'error' as const,
+          'no-empty-schema': 'off' as const,
+          'prefer-strict-schemas': 'off' as const,
+          'use-descriptive-names': 'off' as const,
+          'no-unused-schemas': 'off' as const,
+          'no-expensive-parsing': 'off' as const,
+          'use-efficient-transforms': 'off' as const
+        } as any;
 
       default:
         return {};
@@ -168,7 +172,7 @@ export class ConfigManager {
 
 // Export default config manager instance
 export const configManager = ConfigManager.getInstance();
-export { ConfigSchema, ConfigManager };
+export { ConfigSchema };
 
 // Add loadConfig function for backward compatibility
 export const loadConfig = async (configPath?: string) => {

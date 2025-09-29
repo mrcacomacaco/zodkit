@@ -33,6 +33,7 @@ export type {
 export { ConfigManager } from './core/config';
 export type { Config } from './core/config';
 export { unifiedConfig } from './core/unified-config';
+export { configManager, UnifiedConfigManager as UnifiedConfigSystem, UnifiedConfigSchema as UnifiedConfigSchemaV2, ConfigPresets } from './core/unified-config-system';
 
 // === ERROR RECOVERY ===
 export {
@@ -58,9 +59,9 @@ export type {
 } from './core/memory-optimizer';
 
 // === SCHEMA OPERATIONS (lazy-loaded for tree-shaking) ===
-export const createSchemaGenerator = () => await import("./core/schema-generation").then(m => m.SchemaGenerator || m.default);
-export const createSchemaTester = () => await import("./core/schema-testing").then(m => m.SchemaTester || m.default);
-export const createSchemaTransformer = () => await import("./core/schema-transformation").then(m => m.SchemaTransformer || m.default);
+export const createSchemaGenerator = async () => await import("./core/schema-generation").then(m => m.SchemaGenerator || m.default);
+export const createSchemaTester = async () => await import("./core/schema-testing").then(m => m.SchemaTester || m.default);
+export const createSchemaTransformer = async () => await import("./core/schema-transformation").then(m => m.SchemaTransformer || m.default);
 
 // === UTILITIES ===
 export {
@@ -77,4 +78,5 @@ export type {
 } from './utils';
 
 // === VERSION INFO ===
-export import version from "../package.json".version;
+import packageJson from '../package.json';
+export const version = packageJson.version;

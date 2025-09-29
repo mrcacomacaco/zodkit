@@ -726,7 +726,7 @@ function analyzeDebugSession(session: any): any {
   const warningCount = traces.filter((t: any) => t.level === 'warn').length;
   const errorRate = traces.length > 0 ? (errorCount / traces.length) * 100 : 0;
 
-  const recommendations = [];
+  const recommendations: string[] = [];
 
   if (errorRate > 10) {
     recommendations.push('High error rate detected - review error patterns');

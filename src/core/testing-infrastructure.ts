@@ -18,7 +18,7 @@ import { EventEmitter } from 'events';
 import { z } from 'zod';
 import * as pc from 'picocolors';
 import type { SchemaInfo } from './infrastructure';
-import type { PerformanceMonitor } from '../utils/performance-monitor';
+import type { PerformanceMonitor } from './performance-monitor';
 
 // === TESTING INTERFACES ===
 

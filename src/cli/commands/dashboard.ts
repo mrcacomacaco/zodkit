@@ -10,7 +10,7 @@ import React from 'react';
 import { render } from 'ink';
 import * as pc from 'picocolors';
 import { Command } from 'commander';
-import { Dashboard } from '../ui/dashboard.tsx';
+import { Dashboard } from '../ui/dashboard';
 import { unifiedConfig } from '../../core/unified-config';
 import { Infrastructure } from '../../core/infrastructure';
 import { Utils } from '../../utils';
@@ -86,17 +86,17 @@ export async function dashboardCommand(
       interactive: true
     };
 
-    const app = render(
+    const { waitUntilExit, clear, unmount } = render(
       React.createElement(Dashboard, {
         initialView: dashboardConfig.view,
         config: dashboardConfig
-      })
-    );
+      }) as any
+    ) as any;
 
     // Handle graceful shutdown
     const cleanup = () => {
-      app.clear();
-      app.unmount();
+      clear();
+      unmount();
       console.log('\n👋 Thanks for using ZodKit!');
       process.exit(0);
     };
@@ -105,7 +105,7 @@ export async function dashboardCommand(
     process.on('SIGTERM', cleanup);
 
     // Wait for app to exit
-    await app.waitUntilExit();
+    await waitUntilExit();
 
   } catch (error) {
     logger.error('Dashboard failed to start:', error instanceof Error ? error.message : String(error));

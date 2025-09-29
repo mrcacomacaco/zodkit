@@ -11,6 +11,7 @@
 
 import { EventEmitter } from 'events';
 import { Transform, pipeline } from 'stream';
+import { createReadStream } from 'fs';
 import { promisify } from 'util';
 import * as pc from 'picocolors';
 
@@ -250,7 +251,7 @@ export class StreamingProcessor extends EventEmitter {
 
                 callback();
               } catch (error) {
-                callback(error);
+                callback(error instanceof Error ? error : new Error(String(error)));
               }
             },
             flush: async (callback) => {
@@ -532,8 +533,6 @@ export class MemoryOptimizer extends EventEmitter {
 }
 
 // === EXPORTS ===
-
-export { MemoryMonitor, StreamingProcessor, MemoryOptimizer };
 
 export function createMemoryOptimizer(options?: OptimizationOptions): MemoryOptimizer {
   return new MemoryOptimizer(options);

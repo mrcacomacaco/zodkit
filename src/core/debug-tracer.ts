@@ -222,7 +222,7 @@ export class DebugTracer extends EventEmitter {
 
     this.trace('info', 'Debug session ended', 'DebugTracer', 'endSession', [], {
       sessionId: session.id,
-      duration: session.endTime - session.startTime,
+      duration: (session.endTime || Date.now()) - session.startTime,
       totalTraces: session.traces.length
     });
 
@@ -716,7 +716,7 @@ export class DebugTracer extends EventEmitter {
       metadata: {
         schemaName,
         success: result.success,
-        errorCount: result.success ? 0 : result.error?.errors?.length || 0
+        errorCount: result.success ? 0 : (result.error as any)?.errors?.length || 0
       }
     };
 

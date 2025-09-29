@@ -124,7 +124,7 @@ export async function analyzeCommand(
     const parallelResults = await infra.parallel.processSchemas(
       targetSchemas,
       async (schema) => {
-        const result = await analyzer.analyze(schema, {
+        const result = await analyzer.analyze(schema as any, {
           mode: mode === 'full' ? 'full' : mode as any,
           autoFix: options.autoFix || mode === 'fix',
           strict: mode === 'check'
@@ -200,10 +200,8 @@ async function applyFixes(results: any[], isJsonMode: boolean): Promise<void> {
       for (const fix of result.fixes) {
         if (fix.impact === 'safe' || confirmFix(fix, isJsonMode)) {
           // Apply fix
-          for (const _change of fix.changes) {
-            // Would apply file changes here
-            totalFixes++;
-          }
+          // Would apply file changes here
+          totalFixes += fix.changes.length;
         }
       }
     }
@@ -222,7 +220,6 @@ function confirmFix(fix: any, isJsonMode: boolean): boolean {
 }
 
 function displayResults(results: any[], mode: AnalyzeMode): void {
-  const utils = new Utils();
 
   console.log('\n' + pc.bold('Analysis Results'));
   console.log(pc.gray('─'.repeat(60)));

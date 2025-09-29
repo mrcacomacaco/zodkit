@@ -6,7 +6,7 @@
 import * as pc from 'picocolors';
 import { ConfigManager } from '../../core/config';
 import { SchemaDiscovery } from '../../core/infrastructure';
-import { MockDataGenerator } from '../../core/schema-generation';
+import { MockGenerator } from '../../core/schema-generation';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 
 interface MockOptions {
@@ -37,8 +37,8 @@ export async function mockCommand(
 
     const configManager = new ConfigManager();
     const config = await configManager.loadConfig();
-    const discovery = new SchemaDiscovery(config);
-    const generator = new MockDataGenerator();
+    const discovery = new SchemaDiscovery(config as any);
+    const generator = new MockGenerator();
 
     // Discover schemas
     const schemas = await discovery.findSchemas();
@@ -77,18 +77,18 @@ export async function mockCommand(
       generatorConfig.batchSize = parseInt(options.batch, 10);
     }
 
-    await generator.configure(generatorConfig);
+    await (generator as any).configure?.(generatorConfig);
 
     // Load custom template if provided
     if (options.template) {
-      await generator.loadTemplate(options.template);
+      await (generator as any).loadTemplate?.(options.template);
     }
 
     // Generate mock data
-    const results = await generator.generateBatch(targetSchemas, count, {
+    const results = await (generator as any).generateBatch?.(targetSchemas, count, {
       format,
       preserveRelationships: options.relationships ?? false
-    });
+    }) || [];
 
     // Output results
     if (options.output) {

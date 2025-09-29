@@ -169,10 +169,13 @@ export class PluginRegistry extends EventEmitter {
 
       // Verify installation
       const installedPlugin = await this.loadPluginInfo(packageName);
-      this.installedPlugins.set(packageName, installedPlugin);
-
-      console.log(pc.green(`✅ Successfully installed ${packageName}`));
-      this.emit('installCompleted', { name: packageName, info: installedPlugin });
+      if (installedPlugin) {
+        this.installedPlugins.set(packageName, installedPlugin);
+        console.log(pc.green(`✅ Successfully installed ${packageName}`));
+        this.emit('installCompleted', { name: packageName, info: installedPlugin });
+      } else {
+        throw new Error('Plugin installation verification failed');
+      }
 
     } catch (error) {
       console.error(pc.red(`❌ Failed to install ${name}: ${error}`));

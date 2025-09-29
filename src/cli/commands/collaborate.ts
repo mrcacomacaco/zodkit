@@ -141,9 +141,17 @@ async function handleCreateSession(
 ): Promise<void> {
   const sessionName = options.name ??`Schema Collaboration - ${new Date().toLocaleDateString()}`;
   const userInfo: Omit<CollaborationUser, 'id' | 'isActive' | 'lastSeen'> = {
-    name: options.name ??'Anonymous User',
-    email: options.email ??'user@example.com',
-    role: 'owner' as UserRole
+    name: options.name ?? 'Anonymous User',
+    email: options.email ?? 'user@example.com',
+    role: 'owner' as UserRole,
+    permissions: {
+      canEdit: true,
+      canComment: true,
+      canApprove: true,
+      canMerge: true,
+      canInvite: true,
+      canChangeSettings: true
+    }
   };
 
   const sessionConfig: Partial<CollaborationConfig> = {
@@ -502,7 +510,7 @@ function handleSessionStatus(
   }
 }
 
-function handleInviteUsers(
+async function handleInviteUsers(
   engine: CollaborationEngine,
   options: CollaborateOptions,
   isJsonMode: boolean
@@ -511,7 +519,7 @@ function handleInviteUsers(
     throw new Error('Session ID is required to invite users');
   }
 
-  if (!options.invite ??options.invite.length === 0) {
+  if (!options.invite || options.invite.length === 0) {
     throw new Error('Email addresses are required to invite users');
   }
 

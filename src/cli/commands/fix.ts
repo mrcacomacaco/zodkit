@@ -13,6 +13,9 @@ import { unifiedConfig } from '../../core/unified-config';
 import { Analyzer } from '../../core/analysis';
 import { Infrastructure } from '../../core/infrastructure';
 import { Utils } from '../../utils';
+import { Logger } from '../../utils/logger';
+
+const logger = new Logger();
 
 interface FixOptions {
   dryRun?: boolean;
@@ -96,7 +99,7 @@ Force: ${options.force ? 'enabled' : 'disabled'}`,
     let totalIssues = 0;
 
     for (const schema of targetSchemas) {
-      const result = await analyzer.analyze(schema, {
+      const result = await analyzer.analyze(schema as any, {
         mode: 'full',
         autoFix: true,
         strict: false

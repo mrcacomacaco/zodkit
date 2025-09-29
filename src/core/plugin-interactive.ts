@@ -6,6 +6,7 @@
  */
 
 import * as pc from 'picocolors';
+import * as readline from 'readline';
 import { PluginDevToolkit, PluginScaffoldOptions } from './plugin-dev-toolkit';
 
 // === INTERACTIVE PLUGIN CREATION ===
@@ -75,7 +76,6 @@ export async function createPluginInteractive(name: string, options: any): Promi
  */
 function prompt(question: string, defaultValue?: string): Promise<string> {
   return new Promise((resolve) => {
-    import readline from "readline";
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
@@ -104,7 +104,6 @@ function promptChoice(question: string, choices: string[], defaultChoice: string
       console.log(`  ${marker} ${choice}${isDefault ? pc.gray(' (default)') : ''}`);
     });
 
-    import readline from "readline";
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
@@ -129,7 +128,6 @@ function promptChoice(question: string, choices: string[], defaultChoice: string
 function promptConfirm(question: string, defaultValue: boolean = true): Promise<boolean> {
   return new Promise((resolve) => {
     const defaultText = defaultValue ? 'Y/n' : 'y/N';
-    import readline from "readline";
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout

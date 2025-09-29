@@ -414,14 +414,14 @@ async function generateFromAdvancedSources(
     console.log(pc.blue('📊 Analyzing JSON data with pattern recognition...'));
 
     const jsonData = JSON.parse(readFileSync(resolve(options.fromJson), 'utf-8'));
-    const analysis = await services.dataAnalyzer.analyzeData(jsonData, {
+    const analysis = await (services.dataAnalyzer as any).analyzeData(jsonData, {
       detectPatterns: true,
       inferTypes: true,
       findOptionalFields: true,
       detectArrayPatterns: true,
       analyzeComplexity: true,
       context: options.name || 'JsonData'
-    });
+    } as any);
 
     const genOptions: any = {
       name: options.name || 'JsonDataSchema',
@@ -434,7 +434,7 @@ async function generateFromAdvancedSources(
     if (options.optional !== undefined) genOptions.makeOptional = options.optional;
     if (options.merge !== undefined) genOptions.mergeSimilarObjects = options.merge;
 
-    const schema = await services.coreGenerator.generateFromAnalysis(analysis, genOptions);
+    const schema = await (services.coreGenerator as any).generateFromAnalysis(analysis, genOptions);
 
     const outputFile = join(outputDir, `${options.name || 'json-data'}.schema.ts`);
     const finalCode = `${schema.zodCode}\n\n${schema.typeCode}`;
@@ -461,7 +461,7 @@ async function generateFromAdvancedSources(
   if (options.fromUrl) {
     console.log(pc.blue('🌐 Inspecting API endpoints...'));
 
-    const responses = await services.apiInspector.inspectAPI(options.fromUrl, {
+    const responses = await (services.apiInspector as any).inspectAPI(options.fromUrl, {
       methods: ['GET', 'POST'],
       sampleCount: parseInt(options.samples || '3'),
       timeout: 10000,
@@ -469,7 +469,7 @@ async function generateFromAdvancedSources(
     });
 
     for (const [index, response] of responses.entries()) {
-      const analysis = await services.dataAnalyzer.analyzeData(response.data, {
+      const analysis = await (services.dataAnalyzer as any).analyzeData(response.data, {
         detectPatterns: true,
         inferTypes: true,
         context: `API_${response.method}_${response.endpoint.replace(/[^a-zA-Z0-9]/g, '_')}`
@@ -487,7 +487,7 @@ async function generateFromAdvancedSources(
       };
       if (options.strict !== undefined) apiGenOptions.strict = options.strict;
 
-      const schema = await services.coreGenerator.generateFromAnalysis(analysis, apiGenOptions);
+      const schema = await (services.coreGenerator as any).generateFromAnalysis(analysis, apiGenOptions);
 
       const outputFile = join(outputDir, `${options.name || 'api'}-${response.method.toLowerCase()}-${index}.schema.ts`);
       const finalCode = `${schema.zodCode}\n\n${schema.typeCode}`;
@@ -506,7 +506,7 @@ async function generateFromAdvancedSources(
     console.log(pc.blue('🗄️ Analyzing database schema...'));
 
     if (options.fromDatabase === 'all') {
-      const tableSchemas = await services.dbConnector.analyzeDatabase(options.connection, {
+      const tableSchemas = await (services.dbConnector as any).analyzeDatabase(options.connection, {
         sampleData: true,
         constraints: true,
         relationships: true,
@@ -522,7 +522,7 @@ async function generateFromAdvancedSources(
           metadata: { source: 'database', table: tableSchema.tableName }
         };
         if (options.strict !== undefined) dbGenOptions.strict = options.strict;
-        const schema = await services.coreGenerator.generateFromDatabaseSchema(tableSchema, dbGenOptions);
+        const schema = await (services.coreGenerator as any).generateFromDatabaseSchema(tableSchema, dbGenOptions);
 
         const outputFile = join(outputDir, `${tableSchema.tableName}.schema.ts`);
         const finalCode = `${schema.zodCode}\n\n${schema.typeCode}`;
@@ -535,7 +535,7 @@ async function generateFromAdvancedSources(
         }
       }
     } else {
-      const tableSchema = await services.dbConnector.analyzeTable(options.connection, options.fromDatabase, {
+      const tableSchema = await (services.dbConnector as any).analyzeTable(options.connection, options.fromDatabase, {
         sampleData: true,
         constraints: true,
         relationships: true
@@ -548,7 +548,7 @@ async function generateFromAdvancedSources(
         metadata: { source: 'database', table: tableSchema.tableName }
       };
       if (options.strict !== undefined) dbGenOptions2.strict = options.strict;
-      const schema = await services.coreGenerator.generateFromDatabaseSchema(tableSchema, dbGenOptions2);
+      const schema = await (services.coreGenerator as any).generateFromDatabaseSchema(tableSchema, dbGenOptions2);
 
       const outputFile = join(outputDir, `${tableSchema.tableName}.schema.ts`);
       const finalCode = `${schema.zodCode}\n\n${schema.typeCode}`;
@@ -567,7 +567,7 @@ async function generateFromAdvancedSources(
     console.log(pc.blue('🧠 Learning patterns from existing data...'));
 
     const learningPath = options.input!;
-    const extractedPatterns = await services.dataAnalyzer.learnFromPath(learningPath, {
+    const extractedPatterns = await (services.dataAnalyzer as any).learnFromPath(learningPath, {
       recursive: true,
       fileTypes: ['.json', '.log', '.txt'],
       extractJSON: true,
@@ -589,7 +589,7 @@ async function generateFromAdvancedSources(
         generationOptions.strict = options.strict;
       }
 
-      const schema = await services.coreGenerator.generateFromPattern(pattern, generationOptions);
+      const schema = await (services.coreGenerator as any).generateFromPattern(pattern, generationOptions);
 
       const outputFile = join(outputDir, `${pattern.name}.schema.ts`);
       const finalCode = `${schema.zodCode}\n\n${schema.typeCode}`;

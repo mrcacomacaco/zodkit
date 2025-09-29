@@ -18,6 +18,7 @@ import { z } from 'zod';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as pc from 'picocolors';
+import * as crypto from 'crypto';
 import { glob } from 'glob';
 import { EventEmitter } from 'events';
 import { createServer, Server } from 'http';
@@ -99,7 +100,7 @@ export class SchemaDiscovery {
 
     // Initialize progressive loader if configured
     if (config.progressive && monitor && logger) {
-      this.progressiveLoader = new ProgressiveLoader(config.progressive, monitor, logger);
+      this.progressiveLoader = new ProgressiveLoader(config.progressive, monitor as any, logger as any);
     }
   }
 
@@ -217,7 +218,7 @@ export class SchemaDiscovery {
               this.cache.set(fileKey, content, [fullPath]);
             }
 
-            const discovered = this.parseSchemas(content.content, fullPath);
+            const discovered = this.parseSchemas((content as any).content as string, fullPath);
             processedFiles.push(relativePath);
             return discovered;
 
@@ -264,7 +265,7 @@ export class SchemaDiscovery {
             const discovered = this.parseSchemas(content, fullPath);
             schemas.push(...discovered);
           }
-        } catch (error) {
+        } catch {
           // Skip files that can't be read
         }
       }
@@ -392,7 +393,6 @@ export class SchemaCache {
   }
 
   private generateChecksum(data: unknown): string {
-    import crypto from "crypto";
     return crypto.createHash('md5').update(JSON.stringify(data)).digest('hex');
   }
 
@@ -430,7 +430,7 @@ export class SchemaCache {
     this.stats.totalAccessTime += Date.now() - start;
     this.stats.accessCount++;
 
-    return cached.data;
+    return cached.data as T | null;
   }
 
   set<T = unknown>(key: string, data: T, dependencies: string[] = []): void {
@@ -510,7 +510,7 @@ export class SchemaCache {
             this.invalidateDependency(dep);
           });
           this.fileWatchers.set(dep, watcher);
-        } catch (error) {
+        } catch {
           // File watching may fail in some environments, continue without it
         }
       }
@@ -698,7 +698,7 @@ export class SchemaCache {
             this.set(file, { content, size: content.length }, [file]);
           }
         }
-      } catch (error) {
+      } catch {
         // Continue warming other patterns
       }
     }
@@ -791,7 +791,7 @@ export class Validator {
       result.valid = true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        result.errors = error.errors.map(err => ({
+        result.errors = (error as any).errors.map((err: any) => ({
           path: err.path.join('.'),
           message: err.message,
           code: err.code
@@ -845,7 +845,7 @@ export class MCPServer {
     });
 
     return new Promise((resolve) => {
-      this.server.listen(this.port, () => {
+      this.server!.listen(this.port, () => {
         resolve();
       });
     });
@@ -1105,10 +1105,10 @@ export class ParallelProcessor extends EventEmitter {
   /**
    * Process files in parallel with file system optimizations
    */
-  async processFiles(
+  async processFiles<T = unknown>(
     filePaths: string[],
-    processor: (filePath: string, content: string) => Promise<any>
-  ): Promise<any[]> {
+    processor: (filePath: string, content: string) => Promise<T>
+  ): Promise<T[]> {
     const fileProcessor = async (filePath: string) => {
       try {
         const content = await fs.promises.readFile(filePath, 'utf8');
@@ -1125,7 +1125,7 @@ export class ParallelProcessor extends EventEmitter {
       batchSize: 20
     });
 
-    return results.map(result => result.success ? result.result : null).filter(Boolean);
+    return results.map(result => result.success ? result.result : null).filter(Boolean) as T[];
   }
 
   /**
@@ -1198,7 +1198,7 @@ export class ParallelProcessor extends EventEmitter {
 // === HEALTH MONITOR ===
 
 export class HealthMonitor {
-  private readonly metrics: Map<string, any> = new Map();
+  private readonly metrics: Map<string, unknown> = new Map();
   private interval: NodeJS.Timeout | null = null;
 
   constructor(private readonly config: InfrastructureConfig = {}) {
@@ -1220,7 +1220,7 @@ export class HealthMonitor {
     this.metrics.set('timestamp', Date.now());
   }
 
-  getMetrics(): Record<string, any> {
+  getMetrics(): Record<string, unknown> {
     return Object.fromEntries(this.metrics);
   }
 
@@ -1235,9 +1235,9 @@ export class HealthMonitor {
 // === ERROR REPORTER ===
 
 export class ErrorReporter {
-  private errors: Array<{ timestamp: number; error: any; context: any }> = [];
+  private errors: Array<{ timestamp: number; error: unknown; context: unknown }> = [];
 
-  report(error: any, context?: any): void {
+  report(error: unknown, context?: unknown): void {
     this.errors.push({
       timestamp: Date.now(),
       error,
@@ -1245,7 +1245,7 @@ export class ErrorReporter {
     });
 
     // Log error
-    console.error(pc.red('Error:'), error.message || error);
+    console.error(pc.red('Error:'), (error as any).message || error);
     if (context) {
       console.error(pc.gray('Context:'), context);
     }
@@ -1301,7 +1301,7 @@ export class Infrastructure {
 
     // Initialize progressive loader if configured
     if (config.progressive) {
-      this.progressiveLoader = new ProgressiveLoader(config.progressive, this.monitor as any, logger);
+      this.progressiveLoader = new ProgressiveLoader(config.progressive, this.monitor as any, logger as any);
     }
 
     this.discovery = new SchemaDiscovery(config, this.cache, this.monitor, logger);
@@ -1327,7 +1327,7 @@ export class Infrastructure {
     });
 
     // Handle cache pressure
-    this.cache.on?.('memoryPressure', () => {
+    (this.cache as any).on?.('memoryPressure', () => {
       console.log(`${pc.yellow('📦 Cache memory pressure - reducing cache size')}`);
     });
   }
@@ -1355,7 +1355,7 @@ export class Infrastructure {
       const schemasMap = await this.progressiveLoader.loadSchemas([]);
       return Array.from(schemasMap.values());
     }
-    return await this.discovery.discover();
+    return await (this.discovery as any).discover();
   }
 
   async discoverSchemasInFile(filePath: string): Promise<SchemaInfo[]> {
@@ -1363,14 +1363,14 @@ export class Infrastructure {
       const schemasMap = await this.progressiveLoader.loadSchemas([filePath]);
       return Array.from(schemasMap.values()).filter(schema => schema.filePath === filePath);
     }
-    return await this.discovery.discoverInFile(filePath);
+    return await (this.discovery as any).discoverInFile(filePath);
   }
 
   async invalidateCache(filePath?: string): Promise<void> {
     if (filePath) {
       await this.cache.invalidate(filePath);
       if (this.progressiveLoader) {
-        await this.progressiveLoader.invalidateFile(filePath);
+        await (this.progressiveLoader as any).invalidateFile(filePath);
       }
     } else {
       await this.cache.clear();

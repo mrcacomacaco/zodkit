@@ -13,7 +13,7 @@ import { HotReloadManager, HotReloadConfig } from '../../core/hot-reload';
 import { PerformanceMonitor } from '../../core/performance-monitor';
 import { Logger } from '../../utils/logger';
 import { loadConfig } from '../../core/config';
-import { createCommandConfig } from '../command-registry';
+import { createCommand as createCommandConfig } from '../command-builder';
 
 export interface WatchOptions {
   config?: string;
@@ -26,15 +26,11 @@ export interface WatchOptions {
   strategy?: 'conservative' | 'aggressive' | 'smart';
 }
 
-export const watchCommandConfig = createCommandConfig({
-  name: 'watch',
-  description: 'Watch for schema changes and hot reload automatically',
-  examples: [
-    'zodkit watch',
-    'zodkit watch --patterns "src/**/*.ts" --debounce 500',
-    'zodkit watch --strategy smart --dependency'
-  ]
-});
+export const watchCommandConfig = createCommandConfig(
+  'watch',
+  'Watch for schema changes and hot reload automatically',
+  undefined
+) as any;
 
 export async function watchCommand(options: WatchOptions = {}, command?: Command): Promise<void> {
   const startTime = Date.now();
@@ -44,25 +40,18 @@ export async function watchCommand(options: WatchOptions = {}, command?: Command
     const config = await loadConfig(options.config);
 
     // Initialize infrastructure
-    const performanceMonitor = new PerformanceMonitor({
-      enabled: options.performance !== false,
-      collectGCStats: true,
-      trackMemoryUsage: true,
-      measureExecutionTime: true
-    });
+    const performanceMonitor = new PerformanceMonitor(options.performance !== false);
 
     const logger = new Logger({
-      level: options.verbose ? 'debug' : 'info',
-      enableColors: true,
-      enableTimestamp: true
-    });
+      level: options.verbose ? 'debug' : 'info'
+    } as any);
 
-    const infrastructure = createInfrastructure(config, performanceMonitor, logger);
+    const infrastructure = createInfrastructure(config as any, performanceMonitor, logger);
 
     // Configure hot reload
     const hotReloadConfig: HotReloadConfig = {
       enabled: true,
-      patterns: options.patterns || config.discovery?.patterns || ['src/**/*.ts', '**/*.schema.ts'],
+      patterns: options.patterns || (config as any).discovery?.patterns || ['src/**/*.ts', '**/*.schema.ts'],
       ignored: options.ignore || [
         '**/node_modules/**',
         '**/.git/**',

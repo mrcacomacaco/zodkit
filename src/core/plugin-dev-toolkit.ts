@@ -8,6 +8,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as pc from 'picocolors';
+import { execSync } from 'child_process';
 import type { Plugin, PluginConfig, PluginHooks } from './plugin-system';
 import { PluginTemplates } from './plugin-registry';
 
@@ -241,7 +242,6 @@ export class PluginDevToolkit {
       console.log(pc.gray('  📝 Compiling TypeScript...'));
 
       try {
-        import {  execSync  } from "child_process";
         execSync('npx tsc', { cwd: pluginPath, stdio: 'inherit' });
         console.log(pc.green('  ✅ TypeScript compilation successful'));
       } catch (error) {
@@ -272,7 +272,6 @@ export class PluginDevToolkit {
 
     // Check if user is logged in to npm
     try {
-      import {  execSync  } from "child_process";
       execSync('npm whoami', { cwd: pluginPath, stdio: 'pipe' });
     } catch (error) {
       throw new Error('Not logged in to npm. Run "npm login" first.');
@@ -287,7 +286,6 @@ export class PluginDevToolkit {
     if (options.dry) publishArgs.push('--dry-run');
 
     try {
-      import {  execSync  } from "child_process";
       const command = `npm ${publishArgs.join(' ')}`;
 
       console.log(pc.gray(`  Running: ${command}`));
@@ -574,7 +572,6 @@ describe('${pluginName}', () => {
 
   private async initializeGit(pluginDir: string): Promise<void> {
     try {
-      import {  execSync  } from "child_process";
       execSync('git init', { cwd: pluginDir, stdio: 'pipe' });
       console.log(pc.gray('  📚 Git repository initialized'));
     } catch (error) {
@@ -584,7 +581,6 @@ describe('${pluginName}', () => {
 
   private async installDependencies(pluginDir: string): Promise<void> {
     try {
-      import {  execSync  } from "child_process";
       console.log(pc.gray('  📦 Installing dependencies...'));
       execSync('npm install', { cwd: pluginDir, stdio: 'inherit' });
       console.log(pc.green('  ✅ Dependencies installed'));

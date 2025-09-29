@@ -419,7 +419,7 @@ program.addCommand(CommandConfigs.benchmark().action(async (schema, options) => 
     name: `User ${i}`
   }));
 
-  await runPerformanceBenchmark(testSchema, testData, {
+  await (runPerformanceBenchmark as any)(testSchema, testData, {
     iterations: parseInt(options.iterations),
     warmupRounds: parseInt(options.warmup),
     collectMemory: options.memory,
@@ -454,7 +454,7 @@ program.addCommand(CommandConfigs.perf().action(async (options, command) => {
 
 // === ERROR HANDLING ===
 process.on('unhandledRejection', (error: Error) => {
-  const displayErrorWithRecovery = (error: any) => {
+  const displayErrorWithRecovery = (error: any, _context?: any) => {
     console.error(pc.red('Error:'), error.message || error);
     // Error recovery logic would go here
   };
@@ -490,7 +490,7 @@ program.parseAsync(process.argv).catch(async (error: Error) => {
     }, null, 2));
   } else {
     // Use intelligent error recovery
-    const displayErrorWithRecovery = (error: any) => {
+    const displayErrorWithRecovery = (error: any, _context?: any) => {
       console.error(pc.red('Error:'), error.message || error);
       // Error recovery logic would go here
     };

@@ -13,7 +13,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput, useApp } from 'ink';
+import Ink from 'ink';
+const { Box, Text, useInput, useApp } = Ink as any;
 import Spinner from 'ink-spinner';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
@@ -22,8 +23,6 @@ import * as pc from 'picocolors';
 // Core engines (to be imported from respective modules)
 import type { HintEngine } from '../../core/analysis';
 import type { PerformanceProfilerEngine } from '../../core/performance-profiler';
-import type { SchemaMapEngine } from '../../core/infrastructure';
-import type { ScaffoldEngine } from '../../core/generation/scaffold-engine';
 
 // === UNIFIED DASHBOARD VIEW TYPES ===
 
@@ -64,8 +63,8 @@ interface DashboardProps {
   engines?: {
     hint?: HintEngine;
     profile?: PerformanceProfilerEngine;
-    scaffold?: ScaffoldEngine;
-    map?: SchemaMapEngine;
+    scaffold?: any;
+    map?: any;
   };
 }
 
@@ -228,8 +227,8 @@ const HintView: React.FC<{ engine?: HintEngine }> = ({ engine }) => {
     const loadHints = async () => {
       if (engine) {
         try {
-          const results = await engine.analyzeProject(['src/**/*.ts']);
-          const allHints = Array.from(results.values()).flat();
+          const results = await (engine as any).analyzeProject?.(['src/**/*.ts']);
+          const allHints = results ? Array.from((results as any).values()).flat() : [];
           setHints(allHints);
         } catch (error) {
           console.error('Failed to load hints:', error);
@@ -276,7 +275,7 @@ const ProfileView: React.FC<{ engine?: PerformanceProfilerEngine }> = ({ engine 
   );
 };
 
-const ScaffoldView: React.FC<{ engine?: ScaffoldEngine }> = ({ engine }) => {
+const ScaffoldView: React.FC<{ engine?: any }> = ({ engine }) => {
   const [input, setInput] = useState('');
 
   return (
@@ -295,7 +294,7 @@ const ScaffoldView: React.FC<{ engine?: ScaffoldEngine }> = ({ engine }) => {
   );
 };
 
-const MapView: React.FC<{ engine?: SchemaMapEngine }> = ({ engine }) => {
+const MapView: React.FC<{ engine?: any }> = ({ engine }) => {
   return (
     <Box flexDirection="column" padding={1}>
       <Text bold color="green" marginBottom={1}>
@@ -336,19 +335,19 @@ export class UnifiedDashboard {
   }
 
   registerEngine(type: keyof NonNullable<DashboardProps['engines']>, engine: any) {
-    this.engines[type] = engine;
+    this.engines![type] = engine;
   }
 
   async start(): Promise<void> {
     const { render } = await import('ink');
-    const app = render(
-      <Dashboard
-        initialView={this.config.view}
-        config={this.config}
-        engines={this.engines}
-      />
-    );
-    await app.waitUntilExit();
+    const { waitUntilExit } = render(
+      React.createElement(Dashboard, {
+        initialView: this.config.view,
+        config: this.config,
+        engines: this.engines
+      }) as any
+    ) as any;
+    await waitUntilExit();
   }
 }
 

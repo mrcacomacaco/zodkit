@@ -15,6 +15,7 @@
 import { z } from 'zod';
 import * as ts from 'typescript';
 import * as pc from 'picocolors';
+import { readFileSync } from 'fs';
 // Dynamic import for faker to reduce bundle size
 import { generateMockString, generateMockNumber, generateMockBoolean, generateMockDate } from './faker-utils';
 
@@ -319,28 +320,28 @@ const ApiResponseSchema = z.object({
       return await generateMockDate();
     }
     if (schema instanceof z.ZodArray) {
-      return Array.from({ length: 3 }, () => this.generateMockFromSchema(schema.element));
+      return Array.from({ length: 3 }, () => this.generateMockFromSchema((schema as any).element));
     }
     if (schema instanceof z.ZodObject) {
       const shape = schema.shape;
       const mock: any = {};
       for (const [key, value] of Object.entries(shape)) {
-        mock[key] = this.generateMockFromSchema(value as z.ZodTypeAny);
+        mock[key] = this.generateMockFromSchema(value as any);
       }
       return mock;
     }
     if (schema instanceof z.ZodOptional) {
       // Generate mock for optional values
-      return Math.random() > 0.5 ? this.generateMockFromSchema(schema._def.innerType) : undefined;
+      return Math.random() > 0.5 ? this.generateMockFromSchema((schema as any)._def.innerType) : undefined;
     }
     if (schema instanceof z.ZodEnum) {
-      const values = schema._def.values;
+      const values = (schema as any)._def.values;
       return values[Math.floor(Math.random() * values.length)];
     }
     if (schema instanceof z.ZodUnion) {
-      const options = schema._def.options;
+      const options = (schema as any)._def.options;
       const randomOption = options[Math.floor(Math.random() * options.length)];
-      return this.generateMockFromSchema(randomOption);
+      return this.generateMockFromSchema(randomOption as any);
     }
     // Fallback for unknown types - return a placeholder object instead of null
     console.warn(`Unknown schema type: ${schema.constructor.name}`);
@@ -367,10 +368,10 @@ const ApiResponseSchema = z.object({
 
   private schemaToDocumentation(schema: z.ZodTypeAny, format: string): string {
     if (format === 'markdown') {
-      return `## Schema\n\nType: ${schema._def.typeName}\n`;
+      return `## Schema\n\nType: ${(schema._def as any).typeName}\n`;
     }
 
-    return `<h2>Schema</h2>\n<p>Type: ${schema._def.typeName}</p>`;
+    return `<h2>Schema</h2>\n<p>Type: ${(schema._def as any).typeName}</p>`;
   }
 
   private processTemplate(template: string, options: GenerationOptions): string {

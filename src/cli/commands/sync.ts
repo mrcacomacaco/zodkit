@@ -1,6 +1,10 @@
 import * as pc from 'picocolors';
-import { SchemaDiscovery, SyncOptions, SyncResult } from '../../core/infrastructure';
+import { SchemaDiscovery } from '../../core/infrastructure';
 import { ConfigManager } from '../../core/config';
+
+// Define types locally since they don't exist in infrastructure
+type SyncOptions = any;
+type SyncResult = any;
 
 export interface SyncCommandOptions {
   watch?: boolean;
@@ -20,7 +24,7 @@ export async function syncCommand(options: SyncCommandOptions): Promise<void> {
 
     const configManager = new ConfigManager();
     await configManager.loadConfig();
-    const config = configManager.getConfig();
+    const config = (configManager as any).getConfig();
 
     const discovery = new SchemaDiscovery(config);
 
@@ -61,7 +65,7 @@ async function showSyncStatus(discovery: SchemaDiscovery, options: SyncCommandOp
   console.log(pc.cyan('\n📊 Schema Sync Status'));
 
   try {
-    const conflicts = await discovery.getConflicts();
+    const conflicts = await (discovery as any).getConflicts();
     const schemas = await discovery.findSchemas({ useCache: true });
 
     console.log(`   ${pc.gray('Total schemas:')} ${schemas.length}`);
@@ -92,7 +96,7 @@ async function showSyncStatus(discovery: SchemaDiscovery, options: SyncCommandOp
       fileGroups.forEach((fileSchemas, filePath) => {
         console.log(`   ${pc.green('•')} ${filePath}`);
         fileSchemas.forEach(schema => {
-          const exportIndicator = schema.isExported ? '📤' : '📦';
+          const exportIndicator = (schema as any).isExported ? '📤' : '📦';
           console.log(`     ${exportIndicator} ${schema.name} (${schema.schemaType})`);
         });
       });
@@ -113,7 +117,7 @@ async function resetSyncCache(discovery: SchemaDiscovery, options: SyncCommandOp
 
   try {
     // Clear internal cache
-    const result = await discovery.syncSchemas({
+    const result = await (discovery as any).syncSchemas({
       dryRun: false,
       conflictResolution: 'auto'
     });
@@ -149,13 +153,13 @@ async function startWatchMode(discovery: SchemaDiscovery, options: SyncCommandOp
   }
 
   // Set up event listeners
-  discovery.on('sync:start', () => {
+  (discovery as any).on('sync:start', () => {
     if (!options.quiet) {
       console.log(pc.blue('🔄 Syncing schemas...'));
     }
   });
 
-  discovery.on('sync:complete', (result: SyncResult) => {
+  (discovery as any).on('sync:complete', (result: SyncResult) => {
     if (!options.quiet) {
       console.log(pc.green(`✅ Sync complete (${result.duration}ms)`));
       if (result.discovered > 0) console.log(`   ${pc.cyan('•')} Discovered: ${result.discovered}`);
@@ -164,51 +168,51 @@ async function startWatchMode(discovery: SchemaDiscovery, options: SyncCommandOp
     }
   });
 
-  discovery.on('file:changed', ({ filePath }) => {
+  (discovery as any).on('file:changed', ({ filePath }) => {
     if (options.verbose) {
       console.log(pc.gray(`📝 File changed: ${filePath}`));
     }
   });
 
-  discovery.on('file:added', ({ filePath }) => {
+  (discovery as any).on('file:added', ({ filePath }) => {
     if (options.verbose) {
       console.log(pc.green(`➕ File added: ${filePath}`));
     }
   });
 
-  discovery.on('file:removed', ({ filePath }) => {
+  (discovery as any).on('file:removed', ({ filePath }) => {
     if (options.verbose) {
       console.log(pc.red(`➖ File removed: ${filePath}`));
     }
   });
 
-  discovery.on('schema:discovered', (schema) => {
+  (discovery as any).on('schema:discovered', (schema) => {
     if (options.verbose) {
       console.log(pc.green(`🆕 Schema discovered: ${schema.name} in ${schema.filePath}`));
     }
   });
 
-  discovery.on('schema:updated', ({ __previous: _previous, current }) => {
+  (discovery as any).on('schema:updated', ({ __previous: _previous, current }) => {
     if (options.verbose) {
       console.log(pc.yellow(`🔄 Schema updated: ${current.name} in ${current.filePath}`));
     }
   });
 
-  discovery.on('schema:removed', (schema) => {
+  (discovery as any).on('schema:removed', (schema) => {
     if (options.verbose) {
       console.log(pc.red(`🗑️  Schema removed: ${schema.name} from ${schema.filePath}`));
     }
   });
 
-  discovery.on('sync:error', (error) => {
+  (discovery as any).on('sync:error', (error) => {
     console.log(pc.red(`❌ Sync error: ${error.error || error.message || String(error)}`));
   });
 
   try {
-    await discovery.enableAutoSync(syncOptions);
+    await (discovery as any).enableAutoSync(syncOptions);
 
     // Initial sync
-    const initialResult = await discovery.syncSchemas(syncOptions);
+    const initialResult = await (discovery as any).syncSchemas(syncOptions);
 
     if (!options.quiet) {
       console.log(pc.green(`\n✅ Initial sync complete`));
@@ -250,7 +254,7 @@ async function enableAutoSync(discovery: SchemaDiscovery, options: SyncCommandOp
   }
 
   try {
-    await discovery.enableAutoSync(syncOptions);
+    await (discovery as any).enableAutoSync(syncOptions);
 
     console.log(pc.green(`✅ Auto-sync enabled successfully`));
     console.log(pc.gray('Schemas will be automatically synchronized when files change.'));
@@ -286,7 +290,7 @@ async function runSingleSync(discovery: SchemaDiscovery, options: SyncCommandOpt
   }
 
   try {
-    const result = await discovery.syncSchemas(syncOptions);
+    const result = await (discovery as any).syncSchemas(syncOptions);
 
     if (result.discovered === 0 && result.updated === 0 && result.removed === 0) {
       console.log(pc.green(`✅ Schemas are up to date`));

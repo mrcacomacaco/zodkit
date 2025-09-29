@@ -130,10 +130,9 @@ program.action(() => {
 });
 
 // Implementation functions (simplified to avoid heavy dependencies)
-async function performCheck(schema?: string, options?: any) {
+async function performCheck(schema?: string, _options?: any) {
   // Simple file system check without heavy dependencies
-  const { readdir, stat } = await import('fs/promises');
-  const { join } = await import('path');
+  const { readdir } = await import('fs/promises');
 
   const cwd = process.cwd();
   const results = {
@@ -163,15 +162,15 @@ async function performCheck(schema?: string, options?: any) {
       results.schemas = targetFiles.length;
     }
 
-  } catch (error) {
+  } catch {
     results.issues = 1;
   }
 
   return results;
 }
 
-async function displayCheckResults(schema?: string, options?: any) {
-  const results = await performCheck(schema, options);
+async function displayCheckResults(schema?: string, _options?: any) {
+  const results = await performCheck(schema, _options);
 
   if (schema) {
     console.log(`Checking schema: ${pc.cyan(schema)}`);
@@ -214,8 +213,8 @@ async function performAnalysis(target?: string, options?: any) {
   };
 }
 
-async function displayAnalysisResults(target?: string, options?: any) {
-  const results = await performAnalysis(target, options);
+async function displayAnalysisResults(target?: string, _options?: any) {
+  const results = await performAnalysis(target, _options);
 
   if (target) {
     console.log(`Analyzing: ${pc.cyan(target)}`);
@@ -233,7 +232,7 @@ async function displayAnalysisResults(target?: string, options?: any) {
   console.log(pc.green('\n✅ Analysis complete'));
 }
 
-async function performInit(projectName?: string, options?: any) {
+async function performInit(projectName?: string, _options?: any) {
   const { writeFile } = await import('fs/promises');
   const { join } = await import('path');
 

@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import * as pc from 'picocolors';
+import * as fs from 'fs';
 // Dynamic import for ts-morph to reduce bundle size
 // import { Project, SourceFile, SyntaxKind } from 'ts-morph';
 
@@ -72,10 +73,10 @@ export interface GeneratedCode {
  */
 export class IntelligentCodeGenerator {
   private readonly templates: Map<string, CodeTemplate> = new Map();
-  private readonly project: Project;
+  private readonly project: any;
 
   constructor() {
-    this.project = new Project();
+    this.project = null; // ts-morph Project would be initialized here
     this.initializeTemplates();
   }
 
@@ -666,7 +667,6 @@ export async function runIntelligentGeneration(
     }
 
     if (options.output) {
-      import fs from "fs";
       fs.writeFileSync(options.output, result.code);
       console.log(pc.green(`\n📝 Code saved to ${options.output}`));
     }

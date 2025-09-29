@@ -12,8 +12,9 @@
  */
 
 import { z } from 'zod';
-import * as ts from 'typescript';
-import * as pc from 'picocolors';
+
+// Type for Zod schema or any schema-like object
+type SchemaLike = z.ZodTypeAny | Record<string, unknown>;
 
 // === UNIFIED TYPES ===
 
@@ -61,15 +62,14 @@ export interface Rule {
   name: string;
   severity: 'error' | 'warning' | 'info';
   description: string;
-  check: (schema: any) => Issue[];
-  fix?: (schema: any) => Fix;
+  check: (schema: SchemaLike) => Issue[];
+  fix?: (schema: SchemaLike) => Fix;
 }
 
 // === UNIFIED ANALYZER ===
 
 export class Analyzer {
   private readonly rules: Map<string, Rule> = new Map();
-  private readonly metrics: Map<string, number> = new Map();
 
   constructor() {
     this.initializeRules();
@@ -79,7 +79,7 @@ export class Analyzer {
    * Perform comprehensive analysis
    */
   async analyze(
-    input: any,
+    input: SchemaLike,
     options: AnalysisOptions = {}
   ): Promise<AnalysisResult> {
     const mode = options.mode || 'full';
@@ -138,7 +138,7 @@ export class Analyzer {
   /**
    * Analyze schema complexity
    */
-  private async analyzeComplexity(schema: any, options: AnalysisOptions): Promise<AnalysisResult> {
+  private async analyzeComplexity(schema: SchemaLike, _options: AnalysisOptions): Promise<AnalysisResult> {
     const result: AnalysisResult = {
       score: 0,
       level: 'low',
@@ -209,7 +209,7 @@ export class Analyzer {
   /**
    * Analyze with rules
    */
-  private async analyzeRules(schema: any, options: AnalysisOptions): Promise<AnalysisResult> {
+  private async analyzeRules(schema: SchemaLike, options: AnalysisOptions): Promise<AnalysisResult> {
     const result: AnalysisResult = {
       score: 0,
       level: 'low',
@@ -247,7 +247,7 @@ export class Analyzer {
   /**
    * Analyze API compatibility
    */
-  private async analyzeAPI(schema: any, options: AnalysisOptions): Promise<AnalysisResult> {
+  private async analyzeAPI(schema: SchemaLike, _options: AnalysisOptions): Promise<AnalysisResult> {
     const result: AnalysisResult = {
       score: 0,
       level: 'low',
@@ -296,7 +296,7 @@ export class Analyzer {
   /**
    * Analyze data patterns
    */
-  private async analyzeData(data: any, options: AnalysisOptions): Promise<AnalysisResult> {
+  private async analyzeData(data: unknown, _options: AnalysisOptions): Promise<AnalysisResult> {
     const result: AnalysisResult = {
       score: 0,
       level: 'low',
@@ -309,7 +309,7 @@ export class Analyzer {
     const stats = this.collectDataStats(data);
 
     // Check for anomalies
-    if (stats.nullCount > stats.totalFields * 0.5) {
+    if ((stats.nullCount || 0) > (stats.totalFields || 0) * 0.5) {
       result.issues.push({
         type: 'warning',
         rule: 'high-null-ratio',
@@ -326,7 +326,7 @@ export class Analyzer {
   /**
    * Generate hints and best practices
    */
-  private async analyzeHints(schema: any, options: AnalysisOptions): Promise<AnalysisResult> {
+  private async analyzeHints(schema: SchemaLike, _options: AnalysisOptions): Promise<AnalysisResult> {
     const result: AnalysisResult = {
       score: 0,
       level: 'low',

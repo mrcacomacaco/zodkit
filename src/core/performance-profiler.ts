@@ -640,7 +640,7 @@ export class PerformanceProfilerEngine extends EventEmitter {
 
   private async generateTestData(schema: z.ZodTypeAny): Promise<BenchmarkTestData> {
     // Simplified test data generation
-    const samples = [];
+    const samples: any[] = [];
     for (let i = 0; i < 100; i++) {
       samples.push({ id: i, name: `Test ${i}`, value: Math.random() * 1000 });
     }

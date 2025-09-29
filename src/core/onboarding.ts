@@ -86,7 +86,7 @@ export class OnboardingFlow {
         { key: 'existing', label: 'Existing project (add ZodKit)' },
         { key: 'learning', label: 'Learning/experimenting' }
       ]
-    );
+    ) as any;
 
     // Experience level
     this.preferences.experience = await this.askChoice(
@@ -96,7 +96,7 @@ export class OnboardingFlow {
         { key: 'intermediate', label: 'Intermediate (some experience)' },
         { key: 'advanced', label: 'Advanced (expert level)' }
       ]
-    );
+    ) as any;
 
     // Framework detection/selection
     await this.detectOrSelectFramework();
@@ -360,7 +360,7 @@ export type Product = z.infer<typeof ProductSchema>;
               { key: 'express', label: 'Express' },
               { key: 'other', label: 'Other/None' }
             ]
-          );
+          ) as any;
         }
       } catch {
         // If package.json parsing fails, ask user

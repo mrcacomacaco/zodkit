@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { EventEmitter } from 'events';
 import type { SchemaInfo } from './infrastructure';
-import type { PerformanceMonitor } from '../utils/performance-monitor';
+import type { PerformanceMonitor } from './performance-monitor';
 import type { Logger } from '../utils/logger';
 
 // === PROGRESSIVE LOADING INTERFACES ===
@@ -188,7 +188,7 @@ export class ProgressiveLoader extends EventEmitter {
     return {
       totalSchemas: this.dependencyGraph.getNodeCount(),
       loadedSchemas: this.loadedChunks.size,
-      loadingTime: this.monitor.getMetric('loadingTime') || 0,
+      loadingTime: (this.monitor as any).getMetrics?.()?.loadingTime || 0,
       memoryUsage: this.memoryManager.getCurrentUsage(),
       cacheHitRate: this.lazyCache.size > 0 ? (this.loadedChunks.size / this.lazyCache.size) : 1,
       chunksProcessed: this.loadedChunks.size,
@@ -218,6 +218,7 @@ export class ProgressiveLoader extends EventEmitter {
       execute: async (context) => {
         const chunks = await this.createSchemaChunks(Array.from(context.loadedPaths));
         await this.loadChunksInParallel(chunks, context);
+        return Array.from(context.schemas.values());
       }
     });
 
@@ -233,6 +234,7 @@ export class ProgressiveLoader extends EventEmitter {
           )
         );
         await this.loadChunksInParallel(priorityChunks, context);
+        return Array.from(context.schemas.values());
       }
     });
 
@@ -252,6 +254,7 @@ export class ProgressiveLoader extends EventEmitter {
         for (const chunk of remainingChunks) {
           this.setupLazyLoader(chunk, context);
         }
+        return Array.from(context.schemas.values());
       }
     });
 
@@ -266,6 +269,7 @@ export class ProgressiveLoader extends EventEmitter {
         for (const chunk of orderedChunks) {
           await this.loadChunksInParallel([chunk], context);
         }
+        return Array.from(context.schemas.values());
       }
     });
   }
@@ -551,7 +555,7 @@ export class ProgressiveLoader extends EventEmitter {
 
     // Identify frequently accessed schemas and preload them
     const frequentSchemas = Array.from(context.schemas.values())
-      .filter(schema => schema.complexity > 5) // Arbitrary threshold
+      .filter(schema => (schema.complexity ?? 0) > 5) // Arbitrary threshold
       .slice(0, 10); // Limit warm-up
 
     for (const schema of frequentSchemas) {

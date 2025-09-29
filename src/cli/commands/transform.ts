@@ -11,7 +11,7 @@
 import * as pc from 'picocolors';
 import { Command } from 'commander';
 import { ConfigManager } from '../../core/config';
-import { SchemaTransformation } from '../../core/schema-transformation';
+import { SchemaTransformer } from '../../core/schema-transformation';
 import { Infrastructure } from '../../core/infrastructure';
 
 type TransformMode = 'compose' | 'refactor' | 'migrate' | 'optimize';
@@ -46,8 +46,8 @@ export async function transformCommand(
     // Initialize systems
     const configManager = new ConfigManager();
     const config = await configManager.loadConfig();
-    const infra = new Infrastructure(config);
-    const transformer = new SchemaTransformation();
+    const infra = new Infrastructure(config as any);
+    const transformer = new SchemaTransformer();
 
     // Discover schemas
     const schemas = await infra.discovery.findSchemas();
@@ -142,7 +142,7 @@ async function handleCompose(
   source: any,
   options: TransformOptions,
   schemas: any[],
-  transformer: SchemaTransformation
+  transformer: SchemaTransformer
 ): Promise<any> {
   const operation = options.operation as ComposeOperation;
 
@@ -159,21 +159,18 @@ async function handleCompose(
     throw new Error(`Target schema '${options.target}' not found`);
   }
 
-  return await transformer.transform({
+  return await transformer.transform([source, targetSchema] as any, {
     type: 'compose',
-    schemas: [source, targetSchema],
     operation,
-    options: {
-      preserveDescriptions: true,
-      resolveConflicts: 'merge'
-    }
-  });
+    preserveDescriptions: true,
+    resolveConflicts: 'merge'
+  } as any);
 }
 
 async function handleRefactor(
   source: any,
   options: TransformOptions,
-  transformer: SchemaTransformation
+  transformer: SchemaTransformer
 ): Promise<any> {
   const operation = options.operation as RefactorOperation;
 
@@ -181,46 +178,37 @@ async function handleRefactor(
     throw new Error('Refactor operation required (rename|extract|inline|simplify)');
   }
 
-  return await transformer.transform({
+  return await transformer.transform(source, {
     type: 'refactor',
-    schema: source,
     operation,
-    options: {
-      target: options.target,
-      preserveValidations: true
-    }
-  });
+    target: options.target,
+    preserveValidations: true
+  } as any);
 }
 
 async function handleMigrate(
   source: any,
   options: TransformOptions,
-  transformer: SchemaTransformation
+  transformer: SchemaTransformer
 ): Promise<any> {
-  return await transformer.transform({
+  return await transformer.transform(source, {
     type: 'migrate',
-    schema: source,
     version: options.target || 'latest',
-    options: {
-      preserveBackwardCompatibility: true,
-      generateMigrationScript: true
-    }
-  });
+    preserveBackwardCompatibility: true,
+    generateMigrationScript: true
+  } as any);
 }
 
 async function handleOptimize(
   source: any,
-  transformer: SchemaTransformation
+  transformer: SchemaTransformer
 ): Promise<any> {
-  return await transformer.transform({
-    type: 'optimize',
-    schema: source,
-    options: {
-      removeRedundant: true,
-      simplifyUnions: true,
-      flattenNested: true
-    }
-  });
+  return await transformer.transform(source, {
+    type: 'refactor',
+    removeRedundant: true,
+    simplifyUnions: true,
+    flattenNested: true
+  } as any);
 }
 
 function displayResult(result: any, mode: TransformMode, options: TransformOptions): void {

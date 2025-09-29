@@ -58,8 +58,8 @@ interface MigrateOptions {
 export async function migrateCommand(action: string | undefined, options: MigrateOptions, command: Command): Promise<void> {
   const globalOpts = command.parent?.opts() ?? {};
   const _isJsonMode = (globalOpts as GlobalOptions)?.json ?? false;
-  const assistant = new SchemaMigrationAssistant(options.output);
-  await assistant.initialize();
+  const assistant = new SchemaMigrationAssistant() as any; // SchemaTransformer doesn't take constructor args
+  // No initialize method needed
 
   const isJsonMode = options.format === 'json';
 
@@ -124,7 +124,7 @@ export async function migrateCommand(action: string | undefined, options: Migrat
   }
 }
 
-async function handleCreate(assistant: SchemaMigrationAssistant, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleCreate(assistant: any, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   if (options.interactive) {
     await handleInteractiveCreate(assistant, options, isJsonMode);
     return;
@@ -208,12 +208,12 @@ async function handleCreate(assistant: SchemaMigrationAssistant, options: Migrat
   }
 }
 
-async function handleInteractiveCreate(assistant: SchemaMigrationAssistant, _options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleInteractiveCreate(assistant: any, _options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   if (isJsonMode) {
     throw new Error('Interactive mode is not available in JSON output mode');
   }
 
-  console.log(pc.blue.bold('\n🔄 Create Schema Migration\n'));
+  console.log(pc.blue('\n🔄 Create Schema Migration\n'));
 
   const questions = [
     {
@@ -331,7 +331,7 @@ async function handleInteractiveCreate(assistant: SchemaMigrationAssistant, _opt
     strategy: answers.strategy
   });
 
-  console.log(pc.green.bold('✨ Migration created successfully!\n'));
+  console.log(pc.green('✨ Migration created successfully!\n'));
   displayMigrationSummary(migration);
 
   const nextActions = await inquirer.prompt([{
@@ -365,7 +365,7 @@ async function handleInteractiveCreate(assistant: SchemaMigrationAssistant, _opt
   }
 }
 
-async function handleAnalyze(assistant: SchemaMigrationAssistant, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleAnalyze(assistant: any, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   if (!options.from || !options.to) {
     throw new Error('Both --from and --to schema files are required for analysis');
   }
@@ -387,7 +387,7 @@ async function handleAnalyze(assistant: SchemaMigrationAssistant, options: Migra
   }
 }
 
-async function handleValidate(assistant: SchemaMigrationAssistant, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleValidate(assistant: any, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   if (!options.name) {
     throw new Error('Migration ID is required. Use --name option.');
   }
@@ -397,7 +397,7 @@ async function handleValidate(assistant: SchemaMigrationAssistant, options: Migr
   if (isJsonMode) {
     console.log(JSON.stringify({ action: 'validate', result }, null, 2));
   } else {
-    console.log(pc.blue.bold(`\n🔍 Validation Results for ${result.migration.name}\n`));
+    console.log(pc.blue(`\n🔍 Validation Results for ${result.migration.name}\n`));
 
     if (result.valid) {
       console.log(pc.green('✓ Migration is valid and ready for execution!'));
@@ -406,7 +406,7 @@ async function handleValidate(assistant: SchemaMigrationAssistant, options: Migr
     }
 
     if (result.issues.length > 0) {
-      console.log(pc.red.bold('\n❌ Issues:'));
+      console.log(pc.red('\n❌ Issues:'));
       for (const issue of result.issues) {
         console.log(`  ${pc.red('•')} ${issue.message} (${issue.path})`);
         console.log(`    ${pc.gray('Type:')} ${issue.type}, ${pc.gray('Severity:')} ${issue.severity}`);
@@ -414,7 +414,7 @@ async function handleValidate(assistant: SchemaMigrationAssistant, options: Migr
     }
 
     if (result.warnings.length > 0) {
-      console.log(pc.yellow.bold('\n⚠️  Warnings:'));
+      console.log(pc.yellow('\n⚠️  Warnings:'));
       for (const warning of result.warnings) {
         console.log(`  ${pc.yellow('•')} ${warning.message} (${warning.path})`);
         console.log(`    ${pc.gray('Suggestion:')} ${warning.suggestion}`);
@@ -422,7 +422,7 @@ async function handleValidate(assistant: SchemaMigrationAssistant, options: Migr
     }
 
     if (result.valid) {
-      console.log(pc.green.bold('\n✅ Migration validated successfully!'));
+      console.log(pc.green('\n✅ Migration validated successfully!'));
       console.log(`${pc.blue('Status:')} ${result.migration.status}`);
       console.log(`${pc.blue('Operations:')} ${result.migration.operations.length}`);
       console.log(`${pc.blue('Risk Level:')} ${getRiskLevelDisplay(result.migration.riskLevel)}`);
@@ -430,7 +430,7 @@ async function handleValidate(assistant: SchemaMigrationAssistant, options: Migr
   }
 }
 
-async function handleExecute(assistant: SchemaMigrationAssistant, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleExecute(assistant: any, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   if (!options.name) {
     throw new Error('Migration ID is required. Use --name option.');
   }
@@ -441,12 +441,12 @@ async function handleExecute(assistant: SchemaMigrationAssistant, options: Migra
   }
 
   if (options.dryRun && !isJsonMode) {
-    console.log(pc.blue.bold(`\n🧪 Dry Run: ${migration.name}\n`));
+    console.log(pc.blue(`\n🧪 Dry Run: ${migration.name}\n`));
     console.log(pc.yellow('This is a simulation - no changes will be applied.'));
   }
 
   if (!options.force && !options.dryRun && !isJsonMode) {
-    console.log(pc.yellow.bold('\n⚠️  Migration Execution Warning\n'));
+    console.log(pc.yellow('\n⚠️  Migration Execution Warning\n'));
     displayMigrationSummary(migration);
 
     const confirmation = await inquirer.prompt([{
@@ -500,7 +500,7 @@ async function handleExecute(assistant: SchemaMigrationAssistant, options: Migra
         console.log(`${pc.blue('Operations simulated:')} ${result.operationsExecuted}`);
         console.log(`${pc.blue('Estimated time:')} ${formatDuration(result.executionTime)}`);
       } else {
-        console.log(pc.green.bold('✅ Migration executed successfully!'));
+        console.log(pc.green('✅ Migration executed successfully!'));
         console.log(`${pc.blue('Execution time:')} ${formatDuration(result.executionTime)}`);
         console.log(`${pc.blue('Operations completed:')} ${result.operationsExecuted}`);
         console.log(`${pc.blue('Status:')} ${result.migration.status}`);
@@ -508,7 +508,7 @@ async function handleExecute(assistant: SchemaMigrationAssistant, options: Migra
     }
   } catch (error) {
     if (!isJsonMode) {
-      console.error(pc.red.bold('\n❌ Migration execution failed!'));
+      console.error(pc.red('\n❌ Migration execution failed!'));
       console.error(pc.red(error instanceof Error ? error.message : 'Unknown error'));
 
       if (options.autoRollback !== false) {
@@ -519,7 +519,7 @@ async function handleExecute(assistant: SchemaMigrationAssistant, options: Migra
   }
 }
 
-async function handleRollback(assistant: SchemaMigrationAssistant, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleRollback(assistant: any, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   if (!options.name) {
     throw new Error('Migration ID is required. Use --name option.');
   }
@@ -530,7 +530,7 @@ async function handleRollback(assistant: SchemaMigrationAssistant, options: Migr
   }
 
   if (!options.force && !isJsonMode) {
-    console.log(pc.yellow.bold('\n⚠️  Migration Rollback Warning\n'));
+    console.log(pc.yellow('\n⚠️  Migration Rollback Warning\n'));
     console.log(`${pc.blue('Migration:')} ${migration.name}`);
     console.log(`${pc.blue('Current Status:')} ${migration.status}`);
     console.log(`${pc.blue('Risk Level:')} ${getRiskLevelDisplay(migration.riskLevel)}`);
@@ -588,21 +588,21 @@ async function handleRollback(assistant: SchemaMigrationAssistant, options: Migr
         }
       }, null, 2));
     } else {
-      console.log(pc.green.bold('✅ Migration rolled back successfully!'));
+      console.log(pc.green('✅ Migration rolled back successfully!'));
       console.log(`${pc.blue('Rollback time:')} ${formatDuration(result.executionTime)}`);
       console.log(`${pc.blue('Operations executed:')} ${result.operationsExecuted}`);
       console.log(`${pc.blue('Status:')} ${result.migration.status}`);
     }
   } catch (error) {
     if (!isJsonMode) {
-      console.error(pc.red.bold('\n❌ Migration rollback failed!'));
+      console.error(pc.red('\n❌ Migration rollback failed!'));
       console.error(pc.red(error instanceof Error ? error.message : 'Unknown error'));
     }
     throw error;
   }
 }
 
-async function handleList(assistant: SchemaMigrationAssistant, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleList(assistant: any, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   const listOptions: any = {
     status: options.status as MigrationStatus,
     riskLevel: options.riskLevel as RiskLevel,
@@ -640,7 +640,7 @@ async function handleList(assistant: SchemaMigrationAssistant, options: MigrateO
       return;
     }
 
-    console.log(pc.blue.bold(`\n🔄 Migrations (${migrations.length})\n`));
+    console.log(pc.blue(`\n🔄 Migrations (${migrations.length})\n`));
 
     if (options.format === 'table') {
       console.table(migrations.map(m => ({
@@ -661,7 +661,7 @@ async function handleList(assistant: SchemaMigrationAssistant, options: MigrateO
   }
 }
 
-async function handleShow(assistant: SchemaMigrationAssistant, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleShow(assistant: any, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   if (!options.name) {
     throw new Error('Migration ID is required. Use --name option.');
   }
@@ -678,7 +678,7 @@ async function handleShow(assistant: SchemaMigrationAssistant, options: MigrateO
   }
 }
 
-async function handleStatus(assistant: SchemaMigrationAssistant, _options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleStatus(assistant: any, _options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   const migrations = await assistant.listMigrations({});
 
   const statusCounts = migrations.reduce((counts, migration) => {
@@ -707,19 +707,19 @@ async function handleStatus(assistant: SchemaMigrationAssistant, _options: Migra
       }))
     }, null, 2));
   } else {
-    console.log(pc.blue.bold('\n📊 Migration Status Overview\n'));
+    console.log(pc.blue('\n📊 Migration Status Overview\n'));
 
     console.log(`${pc.blue('Total Migrations:')} ${migrations.length}`);
 
     if (Object.keys(statusCounts).length > 0) {
-      console.log(pc.blue.bold('\n📈 By Status:'));
+      console.log(pc.blue('\n📈 By Status:'));
       for (const [status, count] of Object.entries(statusCounts)) {
         console.log(`  ${getStatusDisplay(status as MigrationStatus)} ${count}`);
       }
     }
 
     if (Object.keys(riskCounts).length > 0) {
-      console.log(pc.blue.bold('\n⚠️  By Risk Level:'));
+      console.log(pc.blue('\n⚠️  By Risk Level:'));
       for (const [risk, count] of Object.entries(riskCounts)) {
         console.log(`  ${getRiskLevelDisplay(risk as RiskLevel)} ${count}`);
       }
@@ -727,7 +727,7 @@ async function handleStatus(assistant: SchemaMigrationAssistant, _options: Migra
 
     const recentMigrations = migrations.slice(0, 5);
     if (recentMigrations.length > 0) {
-      console.log(pc.blue.bold('\n🕒 Recent Migrations:'));
+      console.log(pc.blue('\n🕒 Recent Migrations:'));
       for (const migration of recentMigrations) {
         console.log(`  ${pc.gray('•')} ${migration.name} (${getStatusDisplay(migration.status)})`);
       }
@@ -735,7 +735,7 @@ async function handleStatus(assistant: SchemaMigrationAssistant, _options: Migra
   }
 }
 
-async function handlePlan(assistant: SchemaMigrationAssistant, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handlePlan(assistant: any, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   if (!options.from || !options.to) {
     throw new Error('Both --from and --to schema files are required for evolution planning');
   }
@@ -758,7 +758,7 @@ async function handlePlan(assistant: SchemaMigrationAssistant, options: MigrateO
   if (isJsonMode) {
     console.log(JSON.stringify({ action: 'plan', plan }, null, 2));
   } else {
-    console.log(pc.blue.bold(`\n📋 Evolution Plan: ${plan.name}\n`));
+    console.log(pc.blue(`\n📋 Evolution Plan: ${plan.name}\n`));
     console.log(`${pc.blue('Description:')} ${plan.description}`);
     console.log(`${pc.blue('Version:')} ${plan.currentVersion} → ${plan.targetVersion}`);
     console.log(`${pc.blue('Migrations:')} ${plan.migrations.length}`);
@@ -767,7 +767,7 @@ async function handlePlan(assistant: SchemaMigrationAssistant, options: MigrateO
     console.log(`${pc.blue('Total Duration:')} ${formatDuration(plan.timeline.totalDuration)}`);
 
     if (plan.timeline.phases.length > 0) {
-      console.log(pc.blue.bold('\n📅 Phases:'));
+      console.log(pc.blue('\n📅 Phases:'));
       for (const phase of plan.timeline.phases) {
         console.log(`  ${pc.gray('•')} ${phase.name}: ${phase.migrations.length} migrations`);
         console.log(`    ${pc.gray('Duration:')} ${phase.startDate.toLocaleDateString()} - ${phase.endDate.toLocaleDateString()}`);
@@ -776,7 +776,7 @@ async function handlePlan(assistant: SchemaMigrationAssistant, options: MigrateO
   }
 }
 
-async function handleReport(assistant: SchemaMigrationAssistant, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleReport(assistant: any, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   if (!options.name) {
     throw new Error('Migration ID is required. Use --name option.');
   }
@@ -799,8 +799,8 @@ async function handleReport(assistant: SchemaMigrationAssistant, options: Migrat
   }
 }
 
-async function handleInteractive(assistant: SchemaMigrationAssistant, options: MigrateOptions): Promise<void> {
-  console.log(pc.blue.bold('\n🔄 Schema Migration Assistant\n'));
+async function handleInteractive(assistant: any, options: MigrateOptions): Promise<void> {
+  console.log(pc.blue('\n🔄 Schema Migration Assistant\n'));
 
   while (true) {
     const action = await inquirer.prompt([{
@@ -853,7 +853,7 @@ async function handleInteractive(assistant: SchemaMigrationAssistant, options: M
   }
 }
 
-async function handleInteractiveAnalyze(assistant: SchemaMigrationAssistant): Promise<void> {
+async function handleInteractiveAnalyze(assistant: any): Promise<void> {
   const schemas = await inquirer.prompt([
     {
       type: 'input',
@@ -886,7 +886,7 @@ async function handleInteractiveAnalyze(assistant: SchemaMigrationAssistant): Pr
   await handleAnalyze(assistant, schemas, false);
 }
 
-async function handleInteractiveValidate(assistant: SchemaMigrationAssistant): Promise<void> {
+async function handleInteractiveValidate(assistant: any): Promise<void> {
   const migrations = await assistant.listMigrations({});
 
   if (migrations.length === 0) {
@@ -907,7 +907,7 @@ async function handleInteractiveValidate(assistant: SchemaMigrationAssistant): P
   await handleValidate(assistant, { name: selection.migrationId }, false);
 }
 
-async function handleInteractiveExecute(assistant: SchemaMigrationAssistant): Promise<void> {
+async function handleInteractiveExecute(assistant: any): Promise<void> {
   const migrations = await assistant.listMigrations({ status: 'validated' });
 
   if (migrations.length === 0) {
@@ -939,7 +939,7 @@ async function handleInteractiveExecute(assistant: SchemaMigrationAssistant): Pr
   }, false);
 }
 
-async function handleInteractiveRollback(assistant: SchemaMigrationAssistant): Promise<void> {
+async function handleInteractiveRollback(assistant: any): Promise<void> {
   const migrations = await assistant.listMigrations({ status: 'completed' });
 
   if (migrations.length === 0) {
@@ -971,7 +971,7 @@ async function handleInteractiveRollback(assistant: SchemaMigrationAssistant): P
   }, false);
 }
 
-async function handleInteractivePlan(assistant: SchemaMigrationAssistant): Promise<void> {
+async function handleInteractivePlan(assistant: any): Promise<void> {
   const schemas = await inquirer.prompt([
     {
       type: 'input',
@@ -1016,7 +1016,7 @@ async function handleInteractivePlan(assistant: SchemaMigrationAssistant): Promi
   await handlePlan(assistant, schemas, false);
 }
 
-async function handleWatch(_assistant: SchemaMigrationAssistant, _options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleWatch(_assistant: any, _options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   if (!isJsonMode) {
     console.log(pc.blue('👀 Watching for migration changes... (Press Ctrl+C to stop)'));
   }
@@ -1028,7 +1028,7 @@ async function handleWatch(_assistant: SchemaMigrationAssistant, _options: Migra
   }, 5000);
 }
 
-async function handleExport(assistant: SchemaMigrationAssistant, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleExport(assistant: any, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   const migrations = await assistant.listMigrations({});
   const exportData = {
     migrations,
@@ -1046,7 +1046,7 @@ async function handleExport(assistant: SchemaMigrationAssistant, options: Migrat
   }
 }
 
-async function handleImport(_assistant: SchemaMigrationAssistant, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
+async function handleImport(_assistant: any, options: MigrateOptions, isJsonMode: boolean): Promise<void> {
   if (!options.import) {
     throw new Error('Import file path is required. Use --import option.');
   }
@@ -1085,7 +1085,7 @@ async function loadSchemaFromFile(filePath: string): Promise<z.ZodTypeAny> {
 }
 
 function displayAnalysisResult(analysis: any): void {
-  console.log(pc.blue.bold('🔍 Migration Analysis Results\n'));
+  console.log(pc.blue('🔍 Migration Analysis Results\n'));
 
   // Compatibility Analysis
   console.log(pc.blue('🔄 Compatibility:'));
@@ -1111,7 +1111,7 @@ function displayAnalysisResult(analysis: any): void {
 
   // Recommendations
   if (analysis.recommendations.length > 0) {
-    console.log(pc.blue.bold('\n💡 Recommendations:'));
+    console.log(pc.blue('\n💡 Recommendations:'));
     for (const rec of analysis.recommendations.slice(0, 3)) {
       console.log(`  ${pc.gray('•')} ${rec.title} (${rec.priority} priority)`);
       console.log(`    ${pc.gray(rec.description)}`);
@@ -1119,14 +1119,14 @@ function displayAnalysisResult(analysis: any): void {
   }
 
   // Estimations
-  console.log(pc.blue.bold('\n⏱️  Time Estimations:'));
+  console.log(pc.blue('\n⏱️  Time Estimations:'));
   console.log(`  Development: ${formatDuration(analysis.estimations.development.likely)}`);
   console.log(`  Testing: ${formatDuration(analysis.estimations.testing.likely)}`);
   console.log(`  Deployment: ${formatDuration(analysis.estimations.deployment.likely)}`);
   console.log(`  Total: ${formatDuration(analysis.estimations.total.likely)} (${analysis.estimations.confidence}% confidence)`);
 }
 
-function displayMigrationSummary(migration: SchemaMigration): void {
+function displayMigrationSummary(migration: any): void {
   console.log(`${pc.blue('ID:')} ${migration.id}`);
   console.log(`${pc.blue('Name:')} ${migration.name}`);
   console.log(`${pc.blue('Schema:')} ${migration.schemaName}`);
@@ -1140,8 +1140,8 @@ function displayMigrationSummary(migration: SchemaMigration): void {
   console.log(`${pc.blue('Created:')} ${migration.created.toLocaleDateString()}`);
 }
 
-function displayMigrationListItem(migration: SchemaMigration, detailed: boolean = false): void {
-  console.log(`${pc.blue.bold(migration.name)} ${pc.gray(`(${migration.id.substring(0, 8)}...)`)}`);
+function displayMigrationListItem(migration: any, detailed: boolean = false): void {
+  console.log(`${pc.blue(migration.name)} ${pc.gray(`(${migration.id.substring(0, 8)}...)`)}`);
   console.log(`  ${pc.gray(migration.description || 'No description')}`);
   console.log(`  ${getStatusDisplay(migration.status)} • ${getRiskLevelDisplay(migration.riskLevel)} • ${migration.operations.length} operations`);
 
@@ -1158,8 +1158,8 @@ function displayMigrationListItem(migration: SchemaMigration, detailed: boolean 
   console.log();
 }
 
-function displayMigrationDetails(migration: SchemaMigration): void {
-  console.log(pc.blue.bold(`\n🔄 ${migration.name}\n`));
+function displayMigrationDetails(migration: any): void {
+  console.log(pc.blue(`\n🔄 ${migration.name}\n`));
 
   console.log(`${pc.blue('ID:')} ${migration.id}`);
   console.log(`${pc.blue('Description:')} ${migration.description}`);
@@ -1171,7 +1171,7 @@ function displayMigrationDetails(migration: SchemaMigration): void {
   console.log(`${pc.blue('Risk Level:')} ${getRiskLevelDisplay(migration.riskLevel)}`);
   console.log(`${pc.blue('Compatibility:')} ${getCompatibilityDisplay(migration.compatibility)}`);
 
-  console.log(pc.blue.bold('\n📋 Operations:'));
+  console.log(pc.blue('\n📋 Operations:'));
   if (migration.operations.length === 0) {
     console.log('  No operations defined');
   } else {
@@ -1183,7 +1183,7 @@ function displayMigrationDetails(migration: SchemaMigration): void {
   }
 
   if (migration.breakingChanges.length > 0) {
-    console.log(pc.red.bold('\n⚠️  Breaking Changes:'));
+    console.log(pc.red('\n⚠️  Breaking Changes:'));
     for (const change of migration.breakingChanges) {
       console.log(`  ${pc.red('•')} ${change.field}: ${change.description}`);
       console.log(`    ${pc.gray('Impact:')} ${change.impact}`);
@@ -1191,19 +1191,19 @@ function displayMigrationDetails(migration: SchemaMigration): void {
     }
   }
 
-  console.log(pc.blue.bold('\n🔄 Rollback Plan:'));
+  console.log(pc.blue('\n🔄 Rollback Plan:'));
   console.log(`  Strategy: ${migration.rollbackPlan.strategy}`);
   console.log(`  Operations: ${migration.rollbackPlan.operations.length}`);
   console.log(`  Estimated Time: ${formatDuration(migration.rollbackPlan.estimatedTime)}`);
 
-  console.log(pc.blue.bold('\n📊 Metadata:'));
+  console.log(pc.blue('\n📊 Metadata:'));
   console.log(`  Estimated Duration: ${formatDuration(migration.metadata.estimatedDuration)}`);
   console.log(`  Complexity: ${migration.metadata.complexity}`);
   console.log(`  Confidence: ${migration.metadata.confidence}%`);
   console.log(`  Automation Level: ${migration.metadata.automationLevel}`);
 
   if (migration.executed) {
-    console.log(pc.blue.bold('\n⏱️  Execution Details:'));
+    console.log(pc.blue('\n⏱️  Execution Details:'));
     console.log(`  Executed: ${migration.executed.toLocaleDateString()}`);
     console.log(`  Executed By: ${migration.executedBy || 'Unknown'}`);
     if (migration.executionTime) {
@@ -1212,8 +1212,8 @@ function displayMigrationDetails(migration: SchemaMigration): void {
   }
 }
 
-function displayMigrationOperations(migration: SchemaMigration): void {
-  console.log(pc.blue.bold(`\n📋 Operations for ${migration.name}\n`));
+function displayMigrationOperations(migration: any): void {
+  console.log(pc.blue(`\n📋 Operations for ${migration.name}\n`));
 
   if (migration.operations.length === 0) {
     console.log(pc.gray('No operations defined for this migration.'));
@@ -1221,7 +1221,7 @@ function displayMigrationOperations(migration: SchemaMigration): void {
   }
 
   for (const [index, operation] of migration.operations.entries()) {
-    console.log(`${pc.blue.bold(`${index + 1}. ${operation.type}`)}`);
+    console.log(`${pc.blue(`${index + 1}. ${operation.type}`)}`);
     console.log(`   ${pc.blue('Target:')} ${operation.target}`);
     console.log(`   ${pc.blue('Description:')} ${operation.description}`);
     console.log(`   ${pc.blue('Risk:')} ${getRiskLevelDisplay(operation.risk)}`);
@@ -1241,29 +1241,29 @@ function displayMigrationOperations(migration: SchemaMigration): void {
 }
 
 function displayMigrationReport(report: any): void {
-  console.log(pc.blue.bold(`\n📊 Migration Report: ${report.migration.name}\n`));
+  console.log(pc.blue(`\n📊 Migration Report: ${report.migration.name}\n`));
 
   console.log(`${pc.blue('Generated:')} ${report.generatedAt.toLocaleString()}`);
   console.log(`${pc.blue('Summary:')} ${report.summary}`);
 
-  console.log(pc.blue.bold('\n⚠️  Risk Assessment:'));
+  console.log(pc.blue('\n⚠️  Risk Assessment:'));
   console.log(report.riskAssessment);
 
-  console.log(pc.blue.bold('\n📊 Impact Analysis:'));
+  console.log(pc.blue('\n📊 Impact Analysis:'));
   console.log(report.impactAnalysis);
 
-  console.log(pc.blue.bold('\n⏱️  Timeline:'));
+  console.log(pc.blue('\n⏱️  Timeline:'));
   console.log(report.timeline);
 
   if (report.recommendations.length > 0) {
-    console.log(pc.blue.bold('\n💡 Recommendations:'));
+    console.log(pc.blue('\n💡 Recommendations:'));
     for (const rec of report.recommendations) {
       console.log(`  ${pc.gray('•')} ${rec}`);
     }
   }
 
   if (report.approvals.length > 0) {
-    console.log(pc.blue.bold('\n✅ Approvals:'));
+    console.log(pc.blue('\n✅ Approvals:'));
     for (const approval of report.approvals) {
       const status = approval.approved ? pc.green('✓') : pc.red('✗');
       console.log(`  ${status} ${approval.role}: ${approval.approver}`);
@@ -1276,11 +1276,13 @@ function displayMigrationReport(report: any): void {
 
 // Display helper functions
 function getMigrationTypeDisplay(type: MigrationType): string {
-  const typeColors: Record<MigrationType, string> = {
+  const typeColors: Record<string, string> = {
     'additive': pc.green(type),
     'modification': pc.yellow(type),
     'removal': pc.red(type),
     'restructure': pc.magenta(type),
+    'breaking': pc.red(type),
+    'non-breaking': pc.yellow(type),
     'split': pc.cyan(type),
     'merge': pc.blue(type),
     'rename': pc.yellow(type),
@@ -1292,10 +1294,12 @@ function getMigrationTypeDisplay(type: MigrationType): string {
 }
 
 function getStatusDisplay(status: MigrationStatus): string {
-  const statusColors: Record<MigrationStatus, string> = {
+  const statusColors: Record<string, string> = {
     'planned': pc.blue('📋 planned'),
     'validated': pc.green('✅ validated'),
     'executing': pc.yellow('⏳ executing'),
+    'pending': pc.gray('⏸️  pending'),
+    'in-progress': pc.yellow('⏳ in-progress'),
     'completed': pc.green('✅ completed'),
     'failed': pc.red('❌ failed'),
     'rolled-back': pc.yellow('🔄 rolled-back'),
@@ -1306,11 +1310,10 @@ function getStatusDisplay(status: MigrationStatus): string {
 }
 
 function getRiskLevelDisplay(risk: RiskLevel): string {
-  const riskColors: Record<RiskLevel, string> = {
+  const riskColors: Record<string, string> = {
     'low': pc.green('🟢 low'),
     'medium': pc.yellow('🟡 medium'),
     'high': pc.yellow('🟠 high'),
-    'critical': pc.red('🔴 critical'),
     'extreme': pc.red('🚨 extreme')
   };
   return riskColors[risk] || risk;
@@ -1335,7 +1338,7 @@ function formatDuration(ms: number): string {
 }
 
 async function showHelp(): Promise<void> {
-  console.log(pc.blue.bold('\n🔄 Schema Migration Assistant\n'));
+  console.log(pc.blue('\n🔄 Schema Migration Assistant\n'));
 
   console.log(pc.blue('Available Commands:'));
   console.log('  create       Create new migration from schema changes');

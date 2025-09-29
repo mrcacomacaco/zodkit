@@ -10,7 +10,7 @@ import type { Command } from 'commander';
 
 // === COMMAND TYPE DEFINITIONS ===
 
-export type CommandHandler = (target?: any, options?: any, command?: Command) => Promise<void> | void;
+export type CommandHandler = (target?: any, options?: any, command?: Command) => Promise<any> | any;
 
 export interface LazyCommandModule {
   default: CommandHandler;
@@ -21,43 +21,43 @@ export interface LazyCommandModule {
 
 export const LazyCommands = {
   // Analysis Commands
-  analyze: () => import('./commands/analyze').then((m: LazyCommandModule) => m.analyzeCommand),
-  check: () => import('./commands/check').then((m: LazyCommandModule) => m.checkCommand),
+  analyze: () => import('./commands/analyze').then((m: any) => m.analyzeCommand),
+  check: () => import('./commands/check').then((m: any) => m.checkCommand),
 
   // Generation Commands
-  generate: () => import('./commands/generate').then((m: LazyCommandModule) => m.generateCommand),
-  scaffold: () => import('./commands/scaffold').then((m: LazyCommandModule) => m.scaffoldCommand),
-  mock: () => import('./commands/mock').then((m: LazyCommandModule) => m.mockCommand),
-  docs: () => import('./commands/docs').then((m: LazyCommandModule) => m.docsCommand),
+  generate: () => import('./commands/generate').then((m: any) => m.generateCommand),
+  scaffold: () => import('./commands/scaffold').then((m: any) => m.scaffoldCommand),
+  mock: () => import('./commands/mock').then((m: any) => m.mockCommand),
+  docs: () => import('./commands/docs').then((m: any) => m.docsCommand),
 
   // Testing Commands
-  test: () => import('./commands/test').then((m: LazyCommandModule) => m.testCommand),
+  test: () => import('./commands/test').then((m: any) => m.testCommand),
 
   // Transformation Commands
-  migrate: () => import('./commands/migrate').then((m: LazyCommandModule) => m.migrateCommand),
-  refactor: () => import('./commands/refactor').then((m: LazyCommandModule) => m.refactorCommand),
-  transform: () => import('./commands/transform').then((m: LazyCommandModule) => m.transformCommand),
-  compose: () => import('./commands/compose').then((m: LazyCommandModule) => m.composeCommand),
+  migrate: () => import('./commands/migrate').then((m: any) => m.migrateCommand),
+  refactor: () => import('./commands/transform').then((m: any) => m.transformCommand), // consolidated into transform
+  transform: () => import('./commands/transform').then((m: any) => m.transformCommand),
+  compose: () => import('./commands/transform').then((m: any) => m.transformCommand), // consolidated into transform
 
   // Collaboration Commands
-  collaborate: () => import('./commands/collaborate').then((m: LazyCommandModule) => m.collaborateCommand),
-  mcp: () => import('./commands/mcp').then((m: LazyCommandModule) => m.mcpCommand),
+  collaborate: () => import('./commands/collaborate').then((m: any) => m.collaborateCommand),
+  mcp: () => import('./commands/mcp').then((m: any) => m.mcpCommand),
 
   // Basic Commands
-  init: () => import('./commands/init').then((m: LazyCommandModule) => m.initCommand),
-  fix: () => import('./commands/fix').then((m: LazyCommandModule) => m.fixCommand),
-  explain: () => import('./commands/explain').then((m: LazyCommandModule) => m.explainCommand),
-  sync: () => import('./commands/sync').then((m: LazyCommandModule) => m.syncCommand),
-  map: () => import('./commands/map').then((m: LazyCommandModule) => m.mapCommand),
+  init: () => import('./commands/init').then((m: any) => m.initCommand),
+  fix: () => import('./commands/fix').then((m: any) => m.fixCommand),
+  explain: () => import('./commands/explain').then((m: any) => m.explainCommand),
+  sync: () => import('./commands/sync').then((m: any) => m.syncCommand),
+  map: () => import('./commands/map').then((m: any) => m.mapCommand),
 
   // Dashboard (heavy component - definitely lazy load)
-  dashboard: () => import('./commands/dashboard').then((m: LazyCommandModule) => m.dashboardCommand),
+  dashboard: () => import('./commands/dashboard').then((m: any) => m.dashboardCommand),
 
   // Profile command (analysis alias)
-  profile: () => import('./commands/profile').then((m: LazyCommandModule) => m.profileCommand),
+  profile: () => import('./commands/analyze').then((m: any) => m.analyzeCommand), // use analyze instead
 
   // Setup command
-  setup: () => import('./commands/setup').then((m: LazyCommandModule) => m.setupCommand)
+  setup: () => import('./commands/setup').then((m: any) => m.setupCommand)
 } as const;
 
 // === LAZY COMMAND WRAPPER ===
@@ -69,7 +69,7 @@ export function createLazyCommand(
   commandName: keyof typeof LazyCommands,
   fallbackHandler?: CommandHandler
 ): CommandHandler {
-  return async (target: any, options: any, command: Command) => {
+  return async (target?: any, options?: any, command?: Command) => {
     try {
       const handler = await LazyCommands[commandName]();
       return await handler(target, options, command);
@@ -96,7 +96,7 @@ let commandLoadTimes: Record<string, number> = {};
 export function createPerformantLazyCommand(
   commandName: keyof typeof LazyCommands
 ): CommandHandler {
-  return async (target: any, options: any, command: Command) => {
+  return async (target?: any, options?: any, command?: Command) => {
     const startTime = Date.now();
 
     try {
@@ -139,7 +139,7 @@ export async function preloadCoreCommands(): Promise<void> {
         await LazyCommands[cmd]();
       })
     );
-  } catch (error) {
+  } catch {
     // Silent fail for preloading - commands will still work lazily
   }
 }

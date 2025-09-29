@@ -284,7 +284,7 @@ export class ErrorRecoveryManager extends EventEmitter {
         return { error: report, recovered: true, result };
 
       } catch (recoveryError) {
-        console.warn(`${pc.yellow('⚠️  Recovery failed')}: ${action.description} - ${recoveryError.message}`);
+        console.warn(`${pc.yellow('⚠️  Recovery failed')}: ${action.description} - ${recoveryError instanceof Error ? recoveryError.message : String(recoveryError)}`);
 
         // Continue to next recovery action
         continue;
@@ -416,7 +416,8 @@ export class ErrorRecoveryManager extends EventEmitter {
    * Generate unique error ID
    */
   private generateErrorId(error: Error, context: ErrorContext): string {
-    import hash from "crypto"
+    const crypto = require('crypto');
+    const hash = crypto
       .createHash('md5')
       .update(`${error.message}_${context.operation}_${context.file || ''}`)
       .digest('hex')
@@ -463,7 +464,7 @@ export class ErrorRecoveryManager extends EventEmitter {
           try {
             return await options.fallback(...args);
           } catch (fallbackError) {
-            console.warn(`Fallback also failed: ${fallbackError.message}`);
+            console.warn(`Fallback also failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
           }
         }
 
@@ -609,8 +610,6 @@ export class GracefulDegradation {
 }
 
 // === EXPORTS ===
-
-export { ErrorRecoveryManager, CircuitBreaker, GracefulDegradation };
 
 export function createErrorRecovery(): ErrorRecoveryManager {
   return new ErrorRecoveryManager();

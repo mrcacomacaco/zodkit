@@ -6,9 +6,8 @@
 import * as pc from 'picocolors';
 import { Command } from 'commander';
 import { ConfigManager } from '../../core/config';
-import { SchemaDiscovery } from '../../core/infrastructure';
-import { SchemaCache } from '../../core/infrastructure';
-import { ComplexityAnalyzer } from '../../core/analysis';
+import { SchemaDiscovery, SchemaCache } from '../../core/infrastructure';
+import { Analyzer } from '../../core/analysis';
 
 interface ExplainOptions {
   all?: boolean;
@@ -79,8 +78,8 @@ export async function explainCommand(
     const configManager = new ConfigManager();
     const config = await configManager.loadConfig();
     const cache = new SchemaCache();
-    const discovery = new SchemaDiscovery(config, cache);
-    const analyzer = new ComplexityAnalyzer();
+    const discovery = new SchemaDiscovery(config as any, cache);
+    const analyzer = new Analyzer();
 
     if (!isQuiet && !isJsonMode) {
       console.log(pc.blue('📖 zodkit explain') + pc.gray(' - Analyzing schemas...'));
@@ -135,7 +134,7 @@ export async function explainCommand(
     const explanations: SchemaExplanation[] = [];
 
     for (const schema of targetSchemas) {
-      const explanation = generateExplanation(
+      const explanation = await generateExplanation(
         schema,
         options,
         schemas,
@@ -171,12 +170,12 @@ export async function explainCommand(
   }
 }
 
-function generateExplanation(
+async function generateExplanation(
   schema: unknown,
   options: ExplainOptions,
   allSchemas: unknown[],
-  analyzer: ComplexityAnalyzer
-): SchemaExplanation {
+  analyzer: Analyzer
+): Promise<SchemaExplanation> {
   const schemaInfo = schema as {
     exportName?: string;
     name: string;
@@ -189,7 +188,7 @@ function generateExplanation(
   };
 
   // Analyze complexity
-  const complexityMetrics = analyzer.analyzeSchema(schema);
+  const complexityMetrics = await analyzer.analyze(schema as any, { mode: 'complexity' });
 
   // Build explanation
   const explanation: SchemaExplanation = {
@@ -239,17 +238,17 @@ function generateExplanation(
 
   // Add relationships if requested
   if (options.relationships) {
-    explanation.relationships = findRelationships();
+    explanation.relationships = findRelationships() as any;
   }
 
   // Add usage information if requested
   if (options.usage) {
-    explanation.usage = findUsage();
+    explanation.usage = findUsage() as any;
   }
 
   // Add examples if requested
   if (options.examples) {
-    explanation.examples = generateExamples(schema);
+    explanation.examples = generateExamples(schema as any) as any;
   }
 
   return explanation;
@@ -463,7 +462,7 @@ function generateExamples(schema: unknown): { valid: unknown[]; invalid: unknown
   const valid: unknown[] = [];
   const invalid: unknown[] = [];
 
-  if (schema.schemaType === 'object') {
+  if ((schema as any).schemaType === 'object') {
     valid.push({
       id: 'user-123',
       email: 'user@example.com',
@@ -474,7 +473,7 @@ function generateExamples(schema: unknown): { valid: unknown[]; invalid: unknown
       data: { email: 'invalid-email' },
       errors: ['Invalid email format']
     });
-  } else if (schema.schemaType === 'string') {
+  } else if ((schema as any).schemaType === 'string') {
     valid.push('example@email.com');
     invalid.push({
       data: 123,

@@ -12,6 +12,7 @@
 import * as pc from 'picocolors';
 import { z } from 'zod';
 import { join } from 'path';
+import { writeFileSync } from 'fs';
 
 // === UNIFIED ERROR TYPES ===
 
@@ -197,16 +198,16 @@ export class ErrorSystem {
       let message = issue.message;
 
       // Improve error messages to be more descriptive
-      if (issue.code === 'too_small' && issue.type === 'number') {
+      if (issue.code === 'too_small' && (issue as any).type === 'number') {
         const minimum = (issue as any).minimum;
         message = `Number must be >= ${minimum} (minimum constraint violated)`;
-      } else if (issue.code === 'too_big' && issue.type === 'number') {
+      } else if (issue.code === 'too_big' && (issue as any).type === 'number') {
         const maximum = (issue as any).maximum;
         message = `Number must be <= ${maximum} (maximum constraint violated)`;
-      } else if (issue.code === 'invalid_string') {
-        message = `Invalid string format: ${issue.message}`;
+      } else if ((issue as any).code === 'invalid_string') {
+        message = `Invalid string format: ${(issue as any).message}`;
       } else if (issue.code === 'invalid_type') {
-        message = `Expected ${issue.expected}, received ${issue.received}`;
+        message = `Expected ${(issue as any).expected}, received ${(issue as any).received}`;
       }
 
       if (color) {
@@ -369,7 +370,6 @@ export function formatZodError(error: z.ZodError, options?: { color?: boolean })
 // === BACKWARD COMPATIBILITY ===
 
 // Export for error-recovery.ts compatibility
-export { withRetry as withRetry };
 export { withRetry as withGracefulDegradation };
 
 // Export for error-formatter.ts compatibility

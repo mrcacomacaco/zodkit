@@ -60,10 +60,10 @@ ${pc.gray('Press Ctrl+C to cancel at any time')}`,
 
     if (shouldUseInteractive && !process.env.CI) {
       // Launch TUI wizard
-      await launchInteractiveWizard(projectName, options, utils);
+      await launchInteractiveWizard(options, utils, projectName);
     } else {
       // Use non-interactive mode with smart defaults
-      await runQuickSetup(projectName, options, utils);
+      await runQuickSetup(options, utils, projectName);
     }
 
     // Success message with next steps
@@ -156,9 +156,9 @@ ${pc.bold('Get Help:')}
 }
 
 async function launchInteractiveWizard(
-  projectName?: string,
   options: InitOptions,
-  utils: Utils
+  utils: Utils,
+  projectName?: string
 ): Promise<void> {
   try {
     // For now, we'll use the setup command with enhanced prompts
@@ -193,9 +193,9 @@ async function launchInteractiveWizard(
 }
 
 async function runQuickSetup(
-  projectName?: string,
   options: InitOptions,
-  utils: Utils
+  utils: Utils,
+  projectName?: string
 ): Promise<void> {
   utils.output.output({
     simple: '📦 Setting up project...',

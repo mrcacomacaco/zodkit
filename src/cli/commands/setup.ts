@@ -42,14 +42,14 @@ export async function setupCommand(
 
     switch (mode) {
       case 'init':
-        await initializeProject(projectName, options, isJsonMode);
+        await initializeProject(options, isJsonMode, projectName);
         break;
       case 'contract':
-        await generateContracts(projectName, options, isJsonMode);
+        await generateContracts(options, isJsonMode, projectName);
         break;
       case 'full':
-        await initializeProject(projectName, options, isJsonMode);
-        await generateContracts(projectName, options, isJsonMode);
+        await initializeProject(options, isJsonMode, projectName);
+        await generateContracts(options, isJsonMode, projectName);
         break;
     }
 
@@ -84,9 +84,9 @@ function detectMode(commandName?: string): SetupMode {
 }
 
 async function initializeProject(
-  projectName?: string,
   options: SetupOptions,
-  isJsonMode?: boolean
+  isJsonMode?: boolean,
+  projectName?: string
 ): Promise<void> {
   const cwd = process.cwd();
   const projectDir = projectName ? path.join(cwd, projectName) : cwd;
@@ -176,9 +176,9 @@ async function initializeProject(
 }
 
 async function generateContracts(
-  target?: string,
   options: SetupOptions,
-  isJsonMode?: boolean
+  isJsonMode?: boolean,
+  target?: string
 ): Promise<void> {
   const contractType = options.contractType || 'openapi';
 
@@ -191,7 +191,7 @@ async function generateContracts(
 
   // Discover schemas
   const { Infrastructure } = await import('../../core/infrastructure');
-  const infra = new Infrastructure(config);
+  const infra = new Infrastructure(config as any);
   const schemas = await infra.discovery.findSchemas();
 
   if (schemas.length === 0) {

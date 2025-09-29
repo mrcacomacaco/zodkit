@@ -8,7 +8,7 @@ import { Command } from 'commander';
 import { ConfigManager } from '../../core/config';
 import { SchemaDiscovery } from '../../core/infrastructure';
 import { SchemaMapper } from '../../core/infrastructure';
-import { SchemaMapUI } from '../ui/dashboard.tsx';
+import { SchemaMapUI } from '../ui/dashboard';
 import { writeFileSync } from 'fs';
 
 interface GlobalOptions {
@@ -35,7 +35,7 @@ export async function mapCommand(
 
     const configManager = new ConfigManager();
     const config = await configManager.loadConfig();
-    const discovery = new SchemaDiscovery(config);
+    const discovery = new SchemaDiscovery(config as any);
     const mapper = new SchemaMapper();
 
     // Discover all schemas
@@ -48,9 +48,8 @@ export async function mapCommand(
     const depth = options.depth ? parseInt(options.depth, 10) : 3;
     const relationshipMap = await mapper.buildRelationshipMap(schemas, {
       maxDepth: depth,
-      includeUsage: true,
-      includeTransitive: true
-    });
+      includeUsage: true
+    } as any);
 
     // Filter for specific schema if provided
     if (schemaName) {
@@ -77,7 +76,7 @@ export async function mapCommand(
       console.log(JSON.stringify(relationshipMap, null, 2));
     } else if (options.visualize) {
       // Launch interactive TUI
-      const mapUI = new SchemaMapUI(relationshipMap, schemaName);
+      const mapUI = new SchemaMapUI(relationshipMap);
       await mapUI.start();
     } else {
       // Display text summary

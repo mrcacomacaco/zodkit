@@ -1,8 +1,13 @@
 import * as pc from 'picocolors';
-import { SchemaInfo } from './schema-discovery';
-import { ValidationResult } from './validator';
-import { Config } from './config';
+import { SchemaInfo } from '../infrastructure';
+import { Config } from '../config';
 import fg from 'fast-glob';
+
+// TODO: Replace with proper validation result type
+interface ValidationResult {
+  valid: boolean;
+  errors?: any[];
+}
 
 export interface CoverageReport {
   schemaUsage: {
@@ -134,16 +139,17 @@ export class CoverageReporter {
 
   private async getAllTargetFiles(): Promise<string[]> {
     const patterns: string[] = [];
+    const config = this.config as any;
 
     // Add all target patterns from config
-    if (this.config.targets.mdx) {
-      patterns.push(...this.config.targets.mdx.patterns);
+    if (config.targets?.mdx) {
+      patterns.push(...config.targets.mdx.patterns);
     }
-    if (this.config.targets.components) {
-      patterns.push(...this.config.targets.components.patterns);
+    if (config.targets?.components) {
+      patterns.push(...config.targets.components.patterns);
     }
-    if (this.config.targets.api) {
-      patterns.push(...this.config.targets.api.patterns);
+    if (config.targets?.api) {
+      patterns.push(...config.targets.api.patterns);
     }
 
     if (patterns.length === 0) {
@@ -151,7 +157,7 @@ export class CoverageReporter {
     }
 
     const files = await fg(patterns, {
-      ignore: this.config.schemas.exclude,
+      ignore: config.schemas?.exclude || [],
       absolute: true,
     });
 
@@ -164,11 +170,11 @@ export class CoverageReporter {
     const usedSchemas: SchemaInfo[] = [];
 
     schemas.forEach(schema => {
-      const isReferenced = validationResult.errors.some(error =>
+      const isReferenced = validationResult.errors?.some(error =>
         error.file === schema.filePath
       );
 
-      if (schema.isExported || isReferenced) {
+      if ((schema as any).isExported || isReferenced) {
         usedSchemas.push(schema);
       }
     });
@@ -229,20 +235,20 @@ export class CoverageReporter {
         if (prop.type === 'object' || prop.type === 'array') {
           complexity += 1;
         }
-        if (prop.zodValidator.includes('union') || prop.zodValidator.includes('intersection')) {
+        if (prop.zodValidator?.includes('union') || prop.zodValidator?.includes('intersection')) {
           complexity += 2;
         }
-        if (prop.zodValidator.includes('refine') || prop.zodValidator.includes('transform')) {
+        if (prop.zodValidator?.includes('refine') || prop.zodValidator?.includes('transform')) {
           complexity += 1;
         }
       });
     }
 
     // Add complexity for advanced Zod features
-    if (schema.zodChain.includes('refine')) complexity += 2;
-    if (schema.zodChain.includes('transform')) complexity += 2;
-    if (schema.zodChain.includes('superRefine')) complexity += 3;
-    if (schema.zodChain.includes('pipe')) complexity += 1;
+    if (schema.zodChain?.includes('refine')) complexity += 2;
+    if (schema.zodChain?.includes('transform')) complexity += 2;
+    if (schema.zodChain?.includes('superRefine')) complexity += 3;
+    if (schema.zodChain?.includes('pipe')) complexity += 1;
 
     return complexity;
   }
