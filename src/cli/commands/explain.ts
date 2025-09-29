@@ -6,7 +6,7 @@
 import * as pc from 'picocolors';
 import { Command } from 'commander';
 import { ConfigManager } from '../../core/config';
-import { SchemaDiscovery } from '../../core/schema-discovery';
+import { SchemaDiscovery } from '../../core/infrastructure/schema-discovery';
 import { SchemaCache } from '../../core/schema-cache';
 import { ComplexityAnalyzer } from '../../core/complexity-analyzer';
 

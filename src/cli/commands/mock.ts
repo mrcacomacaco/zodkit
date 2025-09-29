@@ -5,7 +5,7 @@
 
 import * as pc from 'picocolors';
 import { ConfigManager } from '../../core/config';
-import { SchemaDiscovery } from '../../core/schema-discovery';
+import { SchemaDiscovery } from '../../core/infrastructure/schema-discovery';
 import { MockDataGenerator } from '../../core/mock-generator';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 

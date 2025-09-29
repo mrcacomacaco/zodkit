@@ -5,12 +5,12 @@
 
 import * as pc from 'picocolors';
 import { Config, ConfigManager } from '../../core/config';
-import { SchemaDiscovery } from '../../core/schema-discovery';
-import { Validator } from '../../core/validator';
-import { ErrorReporter } from '../../core/error-reporter';
+import { SchemaDiscovery } from '../../core/infrastructure/schema-discovery';
+import { Validator } from '../../core/infrastructure/validator';
+import { ErrorReporter } from '../../core/infrastructure/error-reporter';
 import { FileWatcher } from '../../utils/file-watcher';
 import { PerformanceMonitor } from '../../utils/performance-monitor';
-import { CoverageReporter } from '../../core/coverage-reporter';
+import { CoverageReporter } from '../../core/testing/coverage-reporter';
 // Complex analysis imports (used conditionally)
 // import { ComplexityAnalyzer } from '../../core/complexity-analyzer';
 // import { SchemaCache } from '../../core/schema-cache';
@@ -62,7 +62,7 @@ export async function checkCommand(
       ...config,
       include: options.include ?? config.include,
       exclude: options.exclude ?? config.exclude,
-      verbose: options.verbose ?? config.verbose ?? false,
+      verbose: options.verbose ?? config.output?.verbose ?? false,
       ci: options.ci ?? false,
       fast: options.fast ?? options.quick ?? false,
       fixable: options.fixable ?? false,
@@ -136,7 +136,7 @@ async function runValidation(
     const schemas = await schemaDiscovery.findSchemas();
     performanceMonitor.end('schema-discovery');
 
-    if (config.verbose && !options?.silent) {
+    if (config.output?.verbose && !options?.silent) {
       console.log(pc.gray(`Found ${schemas.length} schemas`));
     }
 

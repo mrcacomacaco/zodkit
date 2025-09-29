@@ -13,7 +13,7 @@ import {
   CompositionOperation,
   CompositionStrategy,
   createSchemaComposer
-} from '../../core/schema-composer';
+} from '../../core/transformation/schema-composer';
 
 interface GlobalOptions {
   json?: boolean;

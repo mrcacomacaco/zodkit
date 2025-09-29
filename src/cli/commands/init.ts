@@ -2,7 +2,7 @@ import * as pc from 'picocolors';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { execSync } from 'child_process';
 import { join } from 'path';
-import { SchemaDiscovery } from '../../core/schema-discovery';
+import { SchemaDiscovery } from '../../core/infrastructure/schema-discovery';
 import { AIRulesGenerator } from '../../core/ai-rules-generator';
 import { ConfigManager } from '../../core/config';
 

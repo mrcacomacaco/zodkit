@@ -1,5 +1,5 @@
 import * as pc from 'picocolors';
-import { SchemaDiscovery, SyncOptions, SyncResult } from '../../core/schema-discovery';
+import { SchemaDiscovery, SyncOptions, SyncResult } from '../../core/infrastructure/schema-discovery';
 import { ConfigManager } from '../../core/config';
 
 export interface SyncCommandOptions {

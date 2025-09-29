@@ -6,7 +6,7 @@
 import * as pc from 'picocolors';
 import { Command } from 'commander';
 import { ConfigManager } from '../../core/config';
-import { SchemaDiscovery } from '../../core/schema-discovery';
+import { SchemaDiscovery } from '../../core/infrastructure/schema-discovery';
 import { SchemaMapper } from '../../core/schema-mapper';
 import { SchemaMapUI } from '../ui/schema-map';
 import { writeFileSync } from 'fs';

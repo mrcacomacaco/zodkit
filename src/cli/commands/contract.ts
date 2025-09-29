@@ -6,8 +6,8 @@
 import * as pc from 'picocolors';
 import { Command } from 'commander';
 import { ConfigManager } from '../../core/config';
-import { SchemaDiscovery } from '../../core/schema-discovery';
-import { SchemaTester } from '../../core/schema-tester';
+import { SchemaDiscovery } from '../../core/infrastructure/schema-discovery';
+import { SchemaTester } from '../../core/testing/schema-tester';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 

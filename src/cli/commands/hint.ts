@@ -5,7 +5,7 @@
 
 import * as pc from 'picocolors';
 import { watch } from 'chokidar';
-import { HintEngine, Hint } from '../../core/hint-engine';
+import { HintEngine, Hint } from '../../core/analysis/hint-engine';
 import { ConfigManager } from '../../core/config';
 import { HintDashboardUI } from '../ui/hint-dashboard';
 import * as path from 'path';

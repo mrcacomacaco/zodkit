@@ -3,9 +3,9 @@ import inquirer from 'inquirer';
 import { readFileSync, writeFileSync, copyFileSync } from 'fs';
 import { basename } from 'path';
 import { ConfigManager } from '../../core/config';
-import { SchemaDiscovery } from '../../core/schema-discovery';
-import { Validator } from '../../core/validator';
-import { ValidationError, ValidationResult } from '../../core/validator';
+import { SchemaDiscovery } from '../../core/infrastructure/schema-discovery';
+import { Validator } from '../../core/infrastructure/validator';
+import { ValidationError, ValidationResult } from '../../core/infrastructure/validator';
 
 export interface FixOptions {
   config?: string;
