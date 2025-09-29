@@ -1,9 +1,5 @@
 /**
- * @fileoverview Transformation modules - Schema transformation and migration
+ * @fileoverview Transformation modules - Schema transformation, migration, and composition
  */
 
-export * from './schema-composer';
-export * from './schema-migration';
-export * from './schema-refactoring';
-export * from './refactor-assistant';
-export * from './schema-bridge';
+export * from '../schema-transformation';

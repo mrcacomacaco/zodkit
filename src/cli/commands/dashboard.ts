@@ -4,7 +4,7 @@
  */
 
 import * as pc from 'picocolors';
-import { ZodkitUI } from '../ui/zodkit-unified';
+import { ZodkitUI } from '../ui/dashboard';
 
 interface DashboardOptions {
   theme?: 'dark' | 'light' | 'neon';

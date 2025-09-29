@@ -4,7 +4,17 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { SchemaMigrationAssistant, SchemaMigration, MigrationType, MigrationStrategy, RiskLevel, MigrationStatus } from '../../core/schema-migration';
+import { SchemaTransformer } from '../../core/schema-transformation';
+
+// Type definitions for migration
+type MigrationType = 'breaking' | 'non-breaking' | 'additive';
+type MigrationStrategy = 'versioned' | 'gradual' | 'immediate';
+type RiskLevel = 'low' | 'medium' | 'high';
+type MigrationStatus = 'pending' | 'in-progress' | 'completed' | 'failed';
+
+// Use SchemaTransformer for migration functionality
+const SchemaMigrationAssistant = SchemaTransformer;
+const SchemaMigration = SchemaTransformer;
 
 interface GlobalOptions {
   json?: boolean;

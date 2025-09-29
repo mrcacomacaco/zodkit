@@ -3,10 +3,10 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { resolve, join } from 'path';
 import fg from 'fast-glob';
 import { ConfigManager } from '../../core/config';
-import { SchemaGenerator } from '../../core/schema-generator';
-import { DataAnalyzer } from '../../core/data-analyzer';
-import { APIInspector } from '../../core/api-inspector';
-import { DatabaseConnector } from '../../core/database-connector';
+import { SchemaGenerator } from '../../core/schema-generation';
+import { DataAnalyzer } from '../../core/analysis';
+import { APIInspector } from '../../core/analysis';
+import { DatabaseConnector } from '../../core/infrastructure';
 
 export interface GenerateOptions {
   config?: string;

@@ -2,8 +2,8 @@ import * as pc from 'picocolors';
 import { resolve } from 'path';
 import { existsSync, readFileSync } from 'fs';
 import fg from 'fast-glob';
-import { SchemaTester, TestingOptions, TestSuite } from '../../core/schema-tester';
-import { SchemaDiscovery } from '../../core/infrastructure/schema-discovery';
+import { SchemaTester, TestingOptions, TestSuite } from '../../core/schema-testing';
+import { SchemaDiscovery } from '../../core/infrastructure';
 import { ConfigManager } from '../../core/config';
 import { z } from 'zod';
 

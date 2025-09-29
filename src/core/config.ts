@@ -2,7 +2,7 @@
  * @fileoverview Simplified Configuration System
  * @module Config
  *
- * Streamlined from infrastructure/config.ts (319 lines -> ~100 lines)
+ * Streamlined from '../../core/infrastructure
  * Consolidated rule definitions and simplified structure
  */
 

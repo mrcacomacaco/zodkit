@@ -6,9 +6,9 @@
 import * as pc from 'picocolors';
 import { Command } from 'commander';
 import { ConfigManager } from '../../core/config';
-import { SchemaDiscovery } from '../../core/infrastructure/schema-discovery';
-import { SchemaCache } from '../../core/schema-cache';
-import { ComplexityAnalyzer } from '../../core/complexity-analyzer';
+import { SchemaDiscovery } from '../../core/infrastructure';
+import { SchemaCache } from '../../core/infrastructure';
+import { ComplexityAnalyzer } from '../../core/analysis';
 
 interface ExplainOptions {
   all?: boolean;

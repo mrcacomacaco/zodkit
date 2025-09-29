@@ -5,7 +5,7 @@
 
 import * as pc from 'picocolors';
 import { ConfigManager } from '../../core/config';
-import { MCPServer } from '../../core/mcp-server';
+import { MCPServer } from '../../core/infrastructure';
 import { existsSync, writeFileSync } from 'fs';
 
 interface MCPOptions {

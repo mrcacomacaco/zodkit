@@ -3,32 +3,63 @@
  * Exports the core API for programmatic usage
  */
 
-// Core validation functionality
-export { Validator } from './core/validator';
-export type { ValidationResult, ValidationError } from './core/validator';
+// Core modules - unified exports
+export {
+  Infrastructure,
+  SchemaDiscovery,
+  SchemaCache,
+  SchemaMapper,
+  Validator,
+  MCPServer,
+  ParallelProcessor,
+  HealthMonitor,
+  ErrorReporter
+} from './core/infrastructure';
+export type {
+  InfrastructureConfig,
+  SchemaInfo,
+  ValidationResult
+} from './core/infrastructure';
 
-// Configuration management
+// Analysis system
+export {
+  Analyzer,
+  ComplexityAnalyzer,
+  RuleEngine,
+  APIInspector,
+  DataAnalyzer,
+  HintEngine
+} from './core/analysis';
+export type {
+  AnalysisResult,
+  AnalysisOptions,
+  Issue,
+  Fix
+} from './core/analysis';
+
+// Configuration
 export { ConfigManager } from './core/config';
 export type { Config } from './core/config';
 
-// Schema discovery
-export { SchemaDiscovery } from './core/schema-discovery';
-export type { SchemaInfo } from './core/schema-discovery';
+// Error system
+export { ErrorSystem } from './core/error-system';
+export type { ErrorRecoveryOptions } from './core/error-system';
 
-// Error reporting
-export { ErrorReporter } from './core/error-reporter';
+// Schema operations
+export { SchemaGeneration } from './core/schema-generation';
+export { SchemaTesting } from './core/schema-testing';
+export { SchemaTransformation } from './core/schema-transformation';
 
-// Coverage reporting
-export { CoverageReporter } from './core/coverage-reporter';
-
-// Utility exports
-export { FileWatcher } from './utils/file-watcher';
-export { PerformanceMonitor } from './utils/performance-monitor';
-
-// Logging utilities
-export { Logger, createLogger, logger, timer } from './utils/logger';
-export type { LogLevel, LoggerOptions, LogContext } from './utils/logger';
-
-// Error recovery utilities
-export { ErrorRecoveryManager, errorRecovery, withRetry, withGracefulDegradation } from './utils/error-recovery';
-export type { RetryOptions } from './utils/error-recovery';
+// Utilities
+export {
+  Utils,
+  FileWatcher,
+  IgnoreParser,
+  Logger,
+  PerformanceMonitor
+} from './utils';
+export type {
+  LogLevel,
+  LoggerOptions,
+  PerformanceMetrics
+} from './utils';
