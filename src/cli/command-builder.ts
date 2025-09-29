@@ -4,7 +4,7 @@
  */
 
 import { Command } from 'commander';
-import { addGlobalOptions, OptionGroups } from './global-options';
+import { OptionGroups } from './global-options';
 
 /**
  * Command categories for automatic option groups
@@ -142,6 +142,13 @@ export const CommandConfigs = {
     .option('--duplicates', 'find duplicate schemas')
     .option('--complexity', 'analyze complexity'),
 
+  analyze: () => createCommand('analyze', 'Comprehensive schema analysis (default mode)', 'analysis')
+    .argument('[target]', 'specific schema or pattern to analyze')
+    .option('-m, --mode <mode>', 'analysis mode: check, hint, fix, full', 'full')
+    .option('--auto-fix', 'automatically apply safe fixes')
+    .option('--fast', 'use cached results when available')
+    .option('-s, --severity <level>', 'minimum severity to report: error, warning, all', 'all'),
+
   hint: () => createCommand('hint', 'Performance & best practice suggestions', 'analysis')
     .argument('[patterns...]', 'file patterns to analyze')
     .option('--fix', 'automatically fix issues'),
@@ -193,11 +200,11 @@ export const CommandConfigs = {
     .option('--name <name>', 'user or session name'),
 
   mcp: () => createCommand('mcp', 'Model Context Protocol server', 'collaboration')
-    .argument('[action]', 'serve, status, or stop', 'serve')
+    .argument('[action]', 'serve, status, or stop')
     .option('--port <n>', 'server port', '3456'),
 
   // Basic commands
-  fix: () => createCommand('fix', 'Automatically fix schema issues', 'basic')
+  fix: () => createCommand('fix', 'Automatically fix schema issues')
     .argument('[schema]', 'specific schema to fix')
     .option('--unsafe', 'apply potentially unsafe fixes'),
 
@@ -214,7 +221,65 @@ export const CommandConfigs = {
     .option('--visualize', 'show ASCII visualization'),
 
   init: () => createCommand('init', 'Initialize zodkit in your project', 'basic')
-    .option('--pm <manager>', 'package manager: pnpm, bun, yarn, npm')
-    .option('--ai <tools...>', 'AI tools: cursor, claude, copilot, windsurf')
-    .option('--mcp', 'enable MCP server integration')
+    .argument('[project-name]', 'project name for initialization')
+    .option('-p, --preset <preset>', 'config preset: minimal, standard, complete', 'standard')
+    .option('-t, --template <template>', 'project template: basic, full-stack, api, library', 'basic')
+    .option('-f, --force', 'force reinitialize existing project')
+    .option('--skip-install', 'skip dependency installation')
+    .option('--no-interactive', 'disable interactive mode'),
+
+  docs: () => createCommand('docs', 'Generate documentation from Zod schemas', 'generation')
+    .option('-o, --output <path>', 'output directory for documentation', './docs/schemas')
+    .option('-f, --format <format>', 'output format: markdown, html, json', 'markdown')
+    .option('--include <patterns...>', 'file patterns to include')
+    .option('--exclude <patterns...>', 'file patterns to exclude')
+    .option('--title <title>', 'documentation title'),
+
+  watch: () => createCommand('watch', 'Watch for schema changes and hot reload automatically', 'basic')
+    .option('--patterns <patterns...>', 'file patterns to watch')
+    .option('--ignore <patterns...>', 'file patterns to ignore')
+    .option('--debounce <ms>', 'debounce time in milliseconds', '300')
+    .option('--strategy <strategy>', 'invalidation strategy: conservative, aggressive, smart', 'smart')
+    .option('--no-dependency', 'disable dependency tracking')
+    .option('--no-performance', 'disable performance monitoring'),
+
+  // Utility commands
+  suggestions: () => createCommand('suggestions', 'Get smart command suggestions based on your project', 'basic')
+    .alias('suggest')
+    .alias('help-me')
+    .argument('[input]', 'describe what you want to do')
+    .option('--last-command <cmd>', 'last command you ran for follow-up suggestions'),
+
+  plugins: () => createCommand('plugins', 'Manage zodkit plugins', 'basic')
+    .argument('[action]', 'action: list, search, install, uninstall, info, update, create, test, validate, build, publish')
+    .argument('[plugin]', 'plugin name or path')
+    .option('--version <version>', 'specific version to install')
+    .option('--dev', 'install as dev dependency')
+    .option('--force', 'force installation/operation')
+    .option('--verified', 'only show verified plugins in search')
+    .option('--limit <n>', 'limit search results', '10')
+    .option('--template <type>', 'plugin template: basic, command, rule, middleware, full', 'basic')
+    .option('--description <desc>', 'plugin description')
+    .option('--author <name>', 'plugin author')
+    .option('--javascript', 'use JavaScript instead of TypeScript')
+    .option('--minify', 'minify built plugin')
+    .option('--tag <tag>', 'npm publish tag')
+    .option('--dry-run', 'dry run for publish'),
+
+  benchmark: () => createCommand('benchmark', 'Run performance benchmarks on your schemas', 'testing')
+    .alias('bench')
+    .argument('[schema]', 'specific schema to benchmark')
+    .option('--iterations <n>', 'number of benchmark iterations', '10000')
+    .option('--warmup <n>', 'number of warmup rounds', '1000')
+    .option('--data <path>', 'test data file path')
+    .option('--baseline', 'save results as performance baseline')
+    .option('--compare', 'compare with saved baseline')
+    .option('--memory', 'include memory usage analysis', true),
+
+  // Smart aliases
+  gen: () => createCommand('gen', 'Generate schemas (shorthand for generate)', 'generation')
+    .alias('g'),
+
+  perf: () => createCommand('perf', 'Performance profiling with monitoring', 'analysis')
+    .alias('p')
 };

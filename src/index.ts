@@ -1,9 +1,9 @@
 /**
  * @fileoverview Main entry point for the zodkit library
- * Exports the core API for programmatic usage
+ * Tree-shaking optimized exports for programmatic usage
  */
 
-// Core modules - unified exports
+// === CORE INFRASTRUCTURE (tree-shakeable) ===
 export {
   Infrastructure,
   SchemaDiscovery,
@@ -11,9 +11,7 @@ export {
   SchemaMapper,
   Validator,
   MCPServer,
-  ParallelProcessor,
-  HealthMonitor,
-  ErrorReporter
+  ParallelProcessor
 } from './core/infrastructure';
 export type {
   InfrastructureConfig,
@@ -21,15 +19,10 @@ export type {
   ValidationResult
 } from './core/infrastructure';
 
-// Analysis system
-export {
-  Analyzer,
-  ComplexityAnalyzer,
-  RuleEngine,
-  APIInspector,
-  DataAnalyzer,
-  HintEngine
-} from './core/analysis';
+// === ANALYSIS SYSTEM ===
+export { Analyzer } from './core/analysis';
+export { ComplexityAnalyzer } from './core/complexity-analyzer';
+export { RuleEngine } from './core/rule-engine';
 export type {
   AnalysisResult,
   AnalysisOptions,
@@ -37,20 +30,40 @@ export type {
   Fix
 } from './core/analysis';
 
-// Configuration
+// === CONFIGURATION ===
 export { ConfigManager } from './core/config';
 export type { Config } from './core/config';
+export { unifiedConfig } from './core/unified-config';
 
-// Error system
-export { ErrorSystem } from './core/error-system';
-export type { ErrorRecoveryOptions } from './core/error-system';
+// === ERROR RECOVERY ===
+export {
+  ErrorRecoveryManager,
+  CircuitBreaker,
+  GracefulDegradation
+} from './core/error-recovery';
+export type {
+  ErrorContext,
+  RecoveryAction,
+  ErrorReport
+} from './core/error-recovery';
 
-// Schema operations
-export { SchemaGeneration } from './core/schema-generation';
-export { SchemaTesting } from './core/schema-testing';
-export { SchemaTransformation } from './core/schema-transformation';
+// === MEMORY OPTIMIZATION ===
+export {
+  MemoryOptimizer,
+  MemoryMonitor,
+  StreamingProcessor
+} from './core/memory-optimizer';
+export type {
+  MemoryStats,
+  OptimizationOptions
+} from './core/memory-optimizer';
 
-// Utilities
+// === SCHEMA OPERATIONS (lazy-loaded for tree-shaking) ===
+export const createSchemaGenerator = () => import('./core/schema-generation').then(m => m.SchemaGenerator || m.default);
+export const createSchemaTester = () => import('./core/schema-testing').then(m => m.SchemaTester || m.default);
+export const createSchemaTransformer = () => import('./core/schema-transformation').then(m => m.SchemaTransformer || m.default);
+
+// === UTILITIES ===
 export {
   Utils,
   FileWatcher,
@@ -63,3 +76,6 @@ export type {
   LoggerOptions,
   PerformanceMetrics
 } from './utils';
+
+// === VERSION INFO ===
+export const version = require('../package.json').version;

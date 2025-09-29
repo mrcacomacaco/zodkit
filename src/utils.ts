@@ -11,7 +11,6 @@
  */
 
 import * as fs from 'fs';
-import * as path from 'path';
 import * as pc from 'picocolors';
 import { EventEmitter } from 'events';
 import { performance } from 'perf_hooks';
@@ -344,6 +343,143 @@ export class PerformanceMonitor {
   }
 }
 
+// === PROGRESSIVE OUTPUT SYSTEM ===
+
+export type OutputMode = 'simple' | 'detailed' | 'verbose' | 'machine' | 'json';
+
+export interface ProgressiveOutputOptions {
+  mode: OutputMode;
+  colors?: boolean;
+  interactive?: boolean;
+  quiet?: boolean;
+}
+
+export class ProgressiveOutput {
+  private options: ProgressiveOutputOptions;
+
+  constructor(options: ProgressiveOutputOptions) {
+    this.options = options;
+  }
+
+  /**
+   * Output based on current verbosity mode
+   */
+  output(content: {
+    simple: string;
+    detailed?: string;
+    verbose?: string;
+    data?: any;
+  }): void {
+    if (this.options.quiet) return;
+
+    switch (this.options.mode) {
+      case 'simple':
+        console.log(content.simple);
+        break;
+
+      case 'detailed':
+        console.log(content.detailed || content.simple);
+        break;
+
+      case 'verbose':
+        if (content.verbose) {
+          console.log(content.verbose);
+        } else {
+          console.log(content.detailed || content.simple);
+        }
+        break;
+
+      case 'machine':
+      case 'json':
+        if (content.data) {
+          console.log(JSON.stringify(content.data, null, this.options.mode === 'json' ? 2 : 0));
+        } else {
+          console.log(JSON.stringify({ message: content.simple }));
+        }
+        break;
+    }
+  }
+
+  /**
+   * Show progress indicator for long operations
+   */
+  progress(message: string, current?: number, total?: number): void {
+    if (this.options.quiet || this.options.mode === 'machine' || this.options.mode === 'json') {
+      return;
+    }
+
+    let output = message;
+    if (current !== undefined && total !== undefined) {
+      const percent = Math.round((current / total) * 100);
+      const bar = '█'.repeat(Math.floor(percent / 5)) + '░'.repeat(20 - Math.floor(percent / 5));
+      output = `${message} [${bar}] ${percent}% (${current}/${total})`;
+    }
+
+    process.stdout.write(`\r${output}`);
+  }
+
+  /**
+   * Clear progress line
+   */
+  clearProgress(): void {
+    if (!this.options.quiet) {
+      process.stdout.write('\r\x1b[K');
+    }
+  }
+
+  /**
+   * Show results summary based on mode
+   */
+  summary(results: {
+    success: boolean;
+    errors: number;
+    warnings: number;
+    processed: number;
+    duration?: number;
+    details?: any;
+  }): void {
+    if (this.options.mode === 'json' || this.options.mode === 'machine') {
+      console.log(JSON.stringify(results, null, this.options.mode === 'json' ? 2 : 0));
+      return;
+    }
+
+    if (this.options.quiet) {
+      if (!results.success) {
+        console.error(`❌ ${results.errors} error${results.errors !== 1 ? 's' : ''}`);
+      }
+      return;
+    }
+
+    const icon = results.success ? '✅' : '❌';
+    const status = results.success ? pc.green('SUCCESS') : pc.red('FAILED');
+
+    this.output({
+      simple: `${icon} ${status} - ${results.processed} processed`,
+      detailed: `${icon} ${status}
+  Processed: ${results.processed}
+  Errors: ${results.errors}
+  Warnings: ${results.warnings}${results.duration ? `
+  Duration: ${this.formatDuration(results.duration)}` : ''}`,
+      verbose: `${icon} Analysis ${status}
+
+  📊 Summary:
+    • Files processed: ${results.processed}
+    • Errors found: ${results.errors}
+    • Warnings: ${results.warnings}${results.duration ? `
+    • Duration: ${this.formatDuration(results.duration)}` : ''}
+
+  ${results.details ? JSON.stringify(results.details, null, 2) : ''}`,
+      data: results
+    });
+  }
+
+  private formatDuration(ms: number): string {
+    if (ms < 1000) return `${ms}ms`;
+    if (ms < 60000) return `${(ms / 1000).toFixed(2)}s`;
+    return `${(ms / 60000).toFixed(2)}m`;
+  }
+}
+
 // === UNIFIED UTILITIES CLASS ===
 
 export class Utils {
@@ -351,16 +487,33 @@ export class Utils {
   public ignore: IgnoreParser;
   public logger: Logger;
   public performance: PerformanceMonitor;
+  public output: ProgressiveOutput;
 
   constructor(options?: {
     ignoreFile?: string;
     logLevel?: LogLevel;
     performanceEnabled?: boolean;
+    outputMode?: OutputMode;
+    quiet?: boolean;
+    verbose?: boolean;
+    json?: boolean;
   }) {
     this.watcher = new FileWatcher();
     this.ignore = new IgnoreParser(options?.ignoreFile);
     this.logger = new Logger({ level: options?.logLevel });
     this.performance = new PerformanceMonitor(options?.performanceEnabled);
+
+    // Determine output mode from options
+    let outputMode: OutputMode = 'simple';
+    if (options?.json) outputMode = 'json';
+    else if (options?.verbose) outputMode = 'verbose';
+    else if (options?.quiet !== true) outputMode = 'detailed';
+
+    this.output = new ProgressiveOutput({
+      mode: outputMode,
+      quiet: options?.quiet || false,
+      colors: true
+    });
   }
 
   /**

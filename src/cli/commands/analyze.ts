@@ -11,8 +11,7 @@
 
 import * as pc from 'picocolors';
 import { Command } from 'commander';
-import { z } from 'zod';
-import { ConfigManager } from '../../core/config';
+import { unifiedConfig } from '../../core/unified-config';
 import { Analyzer } from '../../core/analysis';
 import { Infrastructure } from '../../core/infrastructure';
 import { Utils } from '../../utils';
@@ -24,6 +23,7 @@ interface AnalyzeOptions {
   autoFix?: boolean;
   watch?: boolean;
   fast?: boolean;
+  progressive?: boolean;
   output?: string;
   severity?: 'error' | 'warning' | 'all';
 }
@@ -41,8 +41,8 @@ export async function analyzeCommand(
   const logger = utils.logger;
 
   try {
-    // Determine mode
-    const mode = options.mode || detectMode(command?.name());
+    // Determine mode - default to 'full' for best beginner experience
+    const mode = options.mode || detectMode(command?.name()) || 'full';
 
     if (!isQuiet && !isJsonMode) {
       const modeIcons = {
@@ -52,20 +52,51 @@ export async function analyzeCommand(
         full: '🚀'
       };
 
-      logger.info(`${modeIcons[mode]} Running ${pc.cyan(mode)} analysis...`);
+      const modeDescriptions = {
+        check: 'validation',
+        hint: 'best practices',
+        fix: 'auto-fix',
+        full: 'comprehensive'
+      };
+
+      logger.info(`${modeIcons[mode]} Running ${pc.cyan(modeDescriptions[mode])} analysis...`);
     }
 
-    // Initialize systems
-    const configManager = new ConfigManager();
-    const config = await configManager.loadConfig();
-    const infra = new Infrastructure(config);
+    // Initialize systems with progressive loading if requested
+    const infraConfig = await unifiedConfig.getInfrastructureConfig();
+
+    // Enable progressive loading for large codebases or when explicitly requested
+    if (options.progressive || (!options.fast && infraConfig.discovery?.patterns.length && infraConfig.discovery.patterns.length > 5)) {
+      (infraConfig as any).progressive = {
+        strategy: 'hybrid',
+        enableLazyLoading: true,
+        maxConcurrency: 4,
+        memoryThreshold: 256, // 256MB
+        chunkSize: 25,
+        enableStreaming: true,
+        warmupCache: true,
+        ...(infraConfig as any).progressive
+      };
+    }
+
+    const infra = new Infrastructure(infraConfig);
     const analyzer = new Analyzer();
 
-    // Discover schemas
+    // Auto-discover schemas with progressive loading if configured
     const discovery = infra.discovery;
-    const schemas = await discovery.findSchemas({ useCache: options.fast });
+    const schemas = await discovery.findSchemas({
+      basePath: target || process.cwd(),
+      progressive: options.progressive !== false
+    });
 
     if (schemas.length === 0) {
+      if (!isQuiet && !isJsonMode) {
+        logger.error('No Zod schemas found in the current directory.');
+        logger.info('💡 Try:');
+        logger.info('  • Run from a directory containing .schema.ts files');
+        logger.info('  • Check if you have Zod schemas in: schemas/, types/, or models/');
+        logger.info('  • Use "zodkit init" to set up schema validation');
+      }
       throw new Error('No schemas found in project');
     }
 
@@ -78,14 +109,25 @@ export async function analyzeCommand(
       throw new Error(`No schemas matching '${target}' found`);
     }
 
-    // Analyze schemas
-    const results = await Promise.all(
-      targetSchemas.map(async (schema) => {
+    // Show discovery success message for better UX
+    if (!isQuiet && !isJsonMode) {
+      const schemaCount = targetSchemas.length;
+      const totalCount = schemas.length;
+      if (target) {
+        logger.info(`Found ${pc.cyan(schemaCount)} schema${schemaCount !== 1 ? 's' : ''} matching '${target}' (${totalCount} total)`);
+      } else {
+        logger.info(`Found ${pc.cyan(schemaCount)} Zod schema${schemaCount !== 1 ? 's' : ''} in your project`);
+      }
+    }
+
+    // Analyze schemas in parallel for better performance
+    const parallelResults = await infra.parallel.processSchemas(
+      targetSchemas,
+      async (schema) => {
         const result = await analyzer.analyze(schema, {
           mode: mode === 'full' ? 'full' : mode as any,
           autoFix: options.autoFix || mode === 'fix',
-          strict: mode === 'check',
-          patterns: config.rules?.patterns
+          strict: mode === 'check'
         });
 
         return {
@@ -93,8 +135,10 @@ export async function analyzeCommand(
           file: schema.filePath,
           ...result
         };
-      })
+      }
     );
+
+    const results = parallelResults;
 
     // Apply fixes if in fix mode
     if (mode === 'fix' && !options.autoFix) {
@@ -110,12 +154,12 @@ export async function analyzeCommand(
 
     // Watch mode
     if (options.watch) {
-      startWatchMode(infra, analyzer, options);
+      startWatchMode();
     }
 
     // Exit code based on issues
     const hasErrors = results.some(r =>
-      r.issues.some(i => i.type === 'error')
+      r.issues.some((i: any) => i.type === 'error')
     );
 
     if (hasErrors && mode === 'check') {
@@ -156,7 +200,7 @@ async function applyFixes(results: any[], isJsonMode: boolean): Promise<void> {
       for (const fix of result.fixes) {
         if (fix.impact === 'safe' || confirmFix(fix, isJsonMode)) {
           // Apply fix
-          for (const change of fix.changes) {
+          for (const _change of fix.changes) {
             // Would apply file changes here
             totalFixes++;
           }
@@ -179,7 +223,7 @@ function confirmFix(fix: any, isJsonMode: boolean): boolean {
 
 function displayResults(results: any[], mode: AnalyzeMode): void {
   const utils = new Utils();
-  const logger = utils.logger;
+  const _logger = utils.logger;
 
   console.log('\n' + pc.bold('Analysis Results'));
   console.log(pc.gray('─'.repeat(60)));
@@ -256,11 +300,7 @@ function displayResults(results: any[], mode: AnalyzeMode): void {
   }
 }
 
-function startWatchMode(
-  infra: Infrastructure,
-  analyzer: Analyzer,
-  options: AnalyzeOptions
-): void {
+function startWatchMode(): void {
   const utils = new Utils();
   const logger = utils.logger;
 
@@ -287,6 +327,7 @@ export function registerAnalyzeCommand(program: Command): void {
     .option('-a, --auto-fix', 'automatically apply safe fixes')
     .option('-w, --watch', 'watch for changes')
     .option('-f, --fast', 'fast mode using cache')
+    .option('-p, --progressive', 'use progressive loading for large codebases')
     .option('-s, --severity <level>', 'minimum severity (error|warning|all)', 'all')
     .action(analyzeCommand);
 

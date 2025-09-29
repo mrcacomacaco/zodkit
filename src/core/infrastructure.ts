@@ -23,6 +23,8 @@ import { Worker } from 'worker_threads';
 import { EventEmitter } from 'events';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
+import { MemoryOptimizer, StreamingProcessor } from './memory-optimizer';
+import { ProgressiveLoader, ProgressiveLoadingOptions } from './progressive-loader';
 
 // === UNIFIED TYPES ===
 
@@ -51,6 +53,7 @@ export interface InfrastructureConfig {
     interval: number;
     metrics: string[];
   };
+  progressive?: ProgressiveLoadingOptions;
 }
 
 export interface SchemaInfo {
@@ -86,33 +89,193 @@ export interface ValidationResult {
 
 export class SchemaDiscovery {
   private config: InfrastructureConfig;
-  private cache: Map<string, SchemaInfo[]> = new Map();
+  private cache: SchemaCache;
   private patterns: string[];
+  private progressiveLoader?: ProgressiveLoader;
 
-  constructor(config: InfrastructureConfig = {}) {
+  constructor(config: InfrastructureConfig = {}, cache?: SchemaCache, monitor?: any, logger?: any) {
     this.config = config;
-    this.patterns = config.discovery?.patterns || ['**/*.schema.ts', '**/schemas/*.ts'];
+    this.cache = cache || new SchemaCache(config);
+    this.patterns = config.discovery?.patterns || this.getSmartDefaultPatterns();
+
+    // Initialize progressive loader if configured
+    if (config.progressive && monitor && logger) {
+      this.progressiveLoader = new ProgressiveLoader(config.progressive, monitor, logger);
+    }
   }
 
-  async findSchemas(options?: { useCache?: boolean }): Promise<SchemaInfo[]> {
-    if (options?.useCache && this.cache.size > 0) {
-      return Array.from(this.cache.values()).flat();
+  private getSmartDefaultPatterns(): string[] {
+    return [
+      // Explicit schema files
+      '**/*.schema.ts',
+      '**/*schema.ts',
+      '**/*.zod.ts',
+      '**/*zod.ts',
+
+      // Schema directories
+      '**/schemas/**/*.ts',
+      '**/schema/**/*.ts',
+      'src/schemas/**/*.ts',
+      'src/schema/**/*.ts',
+
+      // Types with zod
+      '**/types/**/*.ts',
+      'src/types/**/*.ts',
+
+      // Models with zod
+      '**/models/**/*.ts',
+      'src/models/**/*.ts',
+
+      // Validation files
+      '**/*validation.ts',
+      '**/*validator.ts'
+    ];
+  }
+
+  async findSchemas(options?: { useCache?: boolean, basePath?: string, progressive?: boolean }): Promise<SchemaInfo[]> {
+    const basePath = options?.basePath || process.cwd();
+    const cacheKey = `schemas_${basePath}_${JSON.stringify(this.patterns)}`;
+
+    // Try cache first if enabled
+    if (options?.useCache !== false) {
+      const cached = this.cache.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
     }
 
+    // Use progressive loading if enabled and available
+    if (options?.progressive !== false && this.progressiveLoader) {
+      return await this.findSchemasProgressive(basePath, cacheKey);
+    }
+
+    return await this.findSchemasTraditional(basePath, cacheKey);
+  }
+
+  private async findSchemasProgressive(basePath: string, cacheKey: string): Promise<SchemaInfo[]> {
+    const startTime = Date.now();
+
+    try {
+      const files = await glob(this.patterns, {
+        cwd: basePath,
+        ignore: this.config.discovery?.exclude || ['node_modules/**', 'dist/**', '.git/**', 'coverage/**'],
+        absolute: true
+      });
+
+      const schemaMap = await this.progressiveLoader!.loadSchemas(files);
+      const schemas = Array.from(schemaMap.values());
+
+      // Cache the result
+      this.cache.set(cacheKey, schemas, files);
+
+      const duration = Date.now() - startTime;
+      console.log(`📊 Progressive schema discovery: ${schemas.length} schemas from ${files.length} files in ${duration}ms`);
+
+      return schemas;
+
+    } catch (error) {
+      console.error('Progressive schema discovery failed:', error);
+      // Fall back to traditional discovery
+      return await this.findSchemasTraditional(basePath, cacheKey);
+    }
+  }
+
+  private async findSchemasTraditional(basePath: string, cacheKey: string): Promise<SchemaInfo[]> {
+    const startTime = Date.now();
     const schemas: SchemaInfo[] = [];
-    const files = await glob(this.patterns, {
-      ignore: this.config.discovery?.exclude || ['node_modules/**', 'dist/**']
-    });
+    const processedFiles: string[] = [];
 
-    for (const file of files) {
-      const content = fs.readFileSync(file, 'utf8');
-      const discovered = this.parseSchemas(content, file);
-      schemas.push(...discovered);
+    try {
+      const files = await glob(this.patterns, {
+        cwd: basePath,
+        ignore: this.config.discovery?.exclude || ['node_modules/**', 'dist/**', '.git/**', 'coverage/**'],
+        absolute: true
+      });
+
+      // Process files in parallel batches for better performance
+      const batchSize = 10;
+      for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize);
+
+        const batchPromises = batch.map(async (fullPath) => {
+          try {
+            const relativePath = path.relative(basePath, fullPath);
+            const fileKey = `file_${fullPath}`;
+
+            // Check if file content is cached
+            let content = this.cache.get(fileKey);
+            if (!content) {
+              const fileContent = fs.readFileSync(fullPath, 'utf8');
+              const stats = fs.statSync(fullPath);
+
+              content = {
+                content: fileContent,
+                mtime: stats.mtime.getTime(),
+                size: stats.size
+              };
+
+              // Cache file content with file as dependency for invalidation
+              this.cache.set(fileKey, content, [fullPath]);
+            }
+
+            const discovered = this.parseSchemas(content.content, fullPath);
+            processedFiles.push(relativePath);
+            return discovered;
+
+          } catch (error) {
+            console.warn(`Warning: Could not read ${fullPath}: ${error}`);
+            return [];
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        batchResults.forEach(result => schemas.push(...result));
+      }
+
+      // Cache the discovery result with all processed files as dependencies
+      this.cache.set(cacheKey, schemas, processedFiles.map(f => path.resolve(basePath, f)));
+
+      const duration = Date.now() - startTime;
+      console.log(`📊 Schema discovery: ${schemas.length} schemas from ${processedFiles.length} files in ${duration}ms`);
+
+    } catch (error) {
+      console.error('Schema discovery failed:', error);
     }
 
-    // Cache results
-    this.cache.set('all', schemas);
     return schemas;
+  }
+
+  async autoDiscover(basePath?: string): Promise<SchemaInfo[]> {
+    const searchPath = basePath || process.cwd();
+    const schemas = await this.findSchemas({ basePath: searchPath });
+
+    if (schemas.length === 0) {
+      // Try a more aggressive search in common files
+      const fallbackPatterns = ['**/*.ts', '**/*.tsx', '**/*.js'];
+      const fallbackFiles = await glob(fallbackPatterns, {
+        cwd: searchPath,
+        ignore: ['node_modules/**', 'dist/**', '.git/**']
+      });
+
+      for (const file of fallbackFiles.slice(0, 50)) { // Limit to prevent scanning too many files
+        try {
+          const fullPath = path.resolve(searchPath, file);
+          const content = fs.readFileSync(fullPath, 'utf8');
+          if (this.containsZodSchemas(content)) {
+            const discovered = this.parseSchemas(content, fullPath);
+            schemas.push(...discovered);
+          }
+        } catch (error) {
+          // Skip files that can't be read
+        }
+      }
+    }
+
+    return schemas;
+  }
+
+  private containsZodSchemas(content: string): boolean {
+    return /z\.\w+\(/.test(content) && /import.*zod/.test(content);
   }
 
   private parseSchemas(content: string, filePath: string): SchemaInfo[] {
@@ -168,56 +331,391 @@ export class SchemaDiscovery {
   }
 }
 
-// === SCHEMA CACHE ===
+// === ADVANCED SCHEMA CACHE ===
+
+export interface CacheEntry {
+  data: any;
+  timestamp: number;
+  version: string;
+  dependencies: string[];
+  size: number;
+  accessCount: number;
+  lastAccess: number;
+  checksum: string;
+}
+
+export interface CacheStats {
+  totalEntries: number;
+  totalSize: number;
+  hitRate: number;
+  avgAccessTime: number;
+  cacheEfficiency: number;
+}
 
 export class SchemaCache {
-  private cache: Map<string, any> = new Map();
+  private cache: Map<string, CacheEntry> = new Map();
+  private fileWatchers: Map<string, fs.FSWatcher> = new Map();
+  private stats = {
+    hits: 0,
+    misses: 0,
+    totalAccessTime: 0,
+    accessCount: 0
+  };
+
   private ttl: number;
   private directory: string;
+  private maxSize: number;
+  private enabled: boolean;
+  private compressionEnabled: boolean;
 
   constructor(config: InfrastructureConfig = {}) {
     this.ttl = config.cache?.ttl || 3600000; // 1 hour default
     this.directory = config.cache?.directory || '.zodkit/cache';
-  }
+    this.enabled = config.cache?.enabled ?? true;
+    this.maxSize = 50 * 1024 * 1024; // 50MB default
+    this.compressionEnabled = true;
 
-  get(key: string): any {
-    const cached = this.cache.get(key);
-    if (cached && Date.now() - cached.timestamp < this.ttl) {
-      return cached.data;
+    if (this.enabled) {
+      this.initializeCache();
     }
-    return null;
   }
 
-  set(key: string, data: any): void {
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now()
-    });
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
-
-  async persist(): Promise<void> {
+  private async initializeCache(): Promise<void> {
+    // Ensure cache directory exists
     if (!fs.existsSync(this.directory)) {
       fs.mkdirSync(this.directory, { recursive: true });
     }
 
-    const data = Object.fromEntries(this.cache);
-    fs.writeFileSync(
-      path.join(this.directory, 'schemas.json'),
-      JSON.stringify(data, null, 2)
-    );
+    // Restore from disk
+    await this.restore();
+
+    // Setup cleanup interval
+    setInterval(() => this.cleanup(), 300000); // Every 5 minutes
+  }
+
+  private generateChecksum(data: any): string {
+    const crypto = require('crypto');
+    return crypto.createHash('md5').update(JSON.stringify(data)).digest('hex');
+  }
+
+  private calculateSize(data: any): number {
+    return Buffer.byteLength(JSON.stringify(data), 'utf8');
+  }
+
+  get(key: string): any {
+    const start = Date.now();
+
+    if (!this.enabled) {
+      this.stats.misses++;
+      return null;
+    }
+
+    const cached = this.cache.get(key);
+
+    if (!cached) {
+      this.stats.misses++;
+      return null;
+    }
+
+    // Check TTL
+    if (Date.now() - cached.timestamp > this.ttl) {
+      this.cache.delete(key);
+      this.stopWatching(key);
+      this.stats.misses++;
+      return null;
+    }
+
+    // Update access stats
+    cached.accessCount++;
+    cached.lastAccess = Date.now();
+    this.stats.hits++;
+    this.stats.totalAccessTime += Date.now() - start;
+    this.stats.accessCount++;
+
+    return cached.data;
+  }
+
+  set(key: string, data: any, dependencies: string[] = []): void {
+    if (!this.enabled) return;
+
+    const size = this.calculateSize(data);
+    const checksum = this.generateChecksum(data);
+
+    // Check if data already exists with same checksum
+    const existing = this.cache.get(key);
+    if (existing && existing.checksum === checksum) {
+      existing.lastAccess = Date.now();
+      existing.accessCount++;
+      return;
+    }
+
+    // Evict if cache is too large
+    this.evictIfNecessary(size);
+
+    const entry: CacheEntry = {
+      data,
+      timestamp: Date.now(),
+      version: this.generateVersion(),
+      dependencies,
+      size,
+      accessCount: 1,
+      lastAccess: Date.now(),
+      checksum
+    };
+
+    this.cache.set(key, entry);
+
+    // Watch dependencies for changes
+    this.watchDependencies(key, dependencies);
+  }
+
+  private generateVersion(): string {
+    return `v${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private evictIfNecessary(newEntrySize: number): void {
+    const currentSize = this.getTotalSize();
+
+    if (currentSize + newEntrySize > this.maxSize) {
+      // Use LRU eviction strategy
+      const sortedEntries = Array.from(this.cache.entries())
+        .sort(([, a], [, b]) => {
+          // Prioritize by access count and recency
+          const scoreA = a.accessCount * 0.7 + (Date.now() - a.lastAccess) * 0.3;
+          const scoreB = b.accessCount * 0.7 + (Date.now() - b.lastAccess) * 0.3;
+          return scoreA - scoreB;
+        });
+
+      // Evict least valuable entries
+      let freedSpace = 0;
+      for (const [key, entry] of sortedEntries) {
+        this.cache.delete(key);
+        this.stopWatching(key);
+        freedSpace += entry.size;
+
+        if (freedSpace >= newEntrySize * 1.2) { // Free 20% extra
+          break;
+        }
+      }
+    }
+  }
+
+  private getTotalSize(): number {
+    return Array.from(this.cache.values()).reduce((total, entry) => total + entry.size, 0);
+  }
+
+  private watchDependencies(key: string, dependencies: string[]): void {
+    dependencies.forEach(dep => {
+      if (fs.existsSync(dep) && !this.fileWatchers.has(dep)) {
+        try {
+          const watcher = fs.watch(dep, () => {
+            this.invalidateDependency(dep);
+          });
+          this.fileWatchers.set(dep, watcher);
+        } catch (error) {
+          // File watching may fail in some environments, continue without it
+        }
+      }
+    });
+  }
+
+  private invalidateDependency(filePath: string): void {
+    // Find all cache entries that depend on this file
+    const keysToInvalidate: string[] = [];
+
+    for (const [key, entry] of this.cache.entries()) {
+      if (entry.dependencies.includes(filePath)) {
+        keysToInvalidate.push(key);
+      }
+    }
+
+    // Invalidate dependent entries
+    keysToInvalidate.forEach(key => {
+      this.cache.delete(key);
+    });
+  }
+
+  private stopWatching(key: string): void {
+    const entry = this.cache.get(key);
+    if (entry) {
+      entry.dependencies.forEach(dep => {
+        const watcher = this.fileWatchers.get(dep);
+        if (watcher) {
+          watcher.close();
+          this.fileWatchers.delete(dep);
+        }
+      });
+    }
+  }
+
+  private cleanup(): void {
+    const now = Date.now();
+    const keysToDelete: string[] = [];
+
+    for (const [key, entry] of this.cache.entries()) {
+      // Remove expired entries
+      if (now - entry.timestamp > this.ttl) {
+        keysToDelete.push(key);
+      }
+    }
+
+    keysToDelete.forEach(key => {
+      this.cache.delete(key);
+      this.stopWatching(key);
+    });
+
+    // Persist changes periodically
+    if (keysToDelete.length > 0) {
+      this.persist().catch(console.error);
+    }
+  }
+
+  invalidate(key: string): void {
+    this.cache.delete(key);
+    this.stopWatching(key);
+  }
+
+  invalidatePattern(pattern: string): void {
+    const regex = new RegExp(pattern.replace('*', '.*'));
+    const keysToDelete: string[] = [];
+
+    for (const key of this.cache.keys()) {
+      if (regex.test(key)) {
+        keysToDelete.push(key);
+      }
+    }
+
+    keysToDelete.forEach(key => {
+      this.cache.delete(key);
+      this.stopWatching(key);
+    });
+  }
+
+  clear(): void {
+    // Stop all watchers
+    this.fileWatchers.forEach(watcher => watcher.close());
+    this.fileWatchers.clear();
+
+    this.cache.clear();
+    this.stats = { hits: 0, misses: 0, totalAccessTime: 0, accessCount: 0 };
+  }
+
+  getStats(): CacheStats {
+    const totalEntries = this.cache.size;
+    const totalSize = this.getTotalSize();
+    const hitRate = this.stats.hits / (this.stats.hits + this.stats.misses) || 0;
+    const avgAccessTime = this.stats.totalAccessTime / this.stats.accessCount || 0;
+    const cacheEfficiency = hitRate * (1 - (totalSize / this.maxSize));
+
+    return {
+      totalEntries,
+      totalSize,
+      hitRate: hitRate * 100,
+      avgAccessTime,
+      cacheEfficiency: cacheEfficiency * 100
+    };
+  }
+
+  async persist(): Promise<void> {
+    if (!this.enabled) return;
+
+    try {
+      if (!fs.existsSync(this.directory)) {
+        fs.mkdirSync(this.directory, { recursive: true });
+      }
+
+      const cacheData = {
+        version: '1.0',
+        timestamp: Date.now(),
+        entries: Object.fromEntries(this.cache),
+        stats: this.stats
+      };
+
+      // Write to temporary file first for atomic operation
+      const tempFile = path.join(this.directory, 'schemas.tmp');
+      const finalFile = path.join(this.directory, 'schemas.json');
+
+      fs.writeFileSync(tempFile, JSON.stringify(cacheData, null, 2));
+      fs.renameSync(tempFile, finalFile);
+
+      // Also create a human-readable stats file
+      const statsFile = path.join(this.directory, 'cache-stats.json');
+      fs.writeFileSync(statsFile, JSON.stringify(this.getStats(), null, 2));
+
+    } catch (error) {
+      console.warn('Failed to persist cache:', error);
+    }
   }
 
   async restore(): Promise<void> {
-    const cacheFile = path.join(this.directory, 'schemas.json');
-    if (fs.existsSync(cacheFile)) {
-      const data = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
-      Object.entries(data).forEach(([key, value]) => {
-        this.cache.set(key, value);
-      });
+    if (!this.enabled) return;
+
+    try {
+      const cacheFile = path.join(this.directory, 'schemas.json');
+
+      if (!fs.existsSync(cacheFile)) {
+        return;
+      }
+
+      const cacheData = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+
+      if (cacheData.version !== '1.0') {
+        console.warn('Cache version mismatch, clearing cache');
+        return;
+      }
+
+      // Restore entries
+      if (cacheData.entries) {
+        Object.entries(cacheData.entries).forEach(([key, entry]) => {
+          this.cache.set(key, entry as CacheEntry);
+        });
+      }
+
+      // Restore stats
+      if (cacheData.stats) {
+        this.stats = { ...this.stats, ...cacheData.stats };
+      }
+
+      console.log(`Cache restored: ${this.cache.size} entries, ${Math.round(this.getTotalSize() / 1024)}KB`);
+
+    } catch (error) {
+      console.warn('Failed to restore cache, starting fresh:', error);
+      this.clear();
+    }
+  }
+
+  // Enhanced cache warming
+  async warmCache(patterns: string[]): Promise<void> {
+    if (!this.enabled) return;
+
+    console.log('🔥 Warming cache...');
+
+    for (const pattern of patterns) {
+      try {
+        const files = await glob(pattern);
+
+        for (const file of files.slice(0, 100)) { // Limit to prevent overwhelming
+          if (!this.cache.has(file)) {
+            const content = fs.readFileSync(file, 'utf8');
+            this.set(file, { content, size: content.length }, [file]);
+          }
+        }
+      } catch (error) {
+        // Continue warming other patterns
+      }
+    }
+
+    console.log(`Cache warmed: ${this.cache.size} entries`);
+  }
+
+  // Memory pressure handling
+  handleMemoryPressure(): void {
+    const currentSize = this.getTotalSize();
+    const targetSize = this.maxSize * 0.7; // Reduce to 70% of max
+
+    if (currentSize > targetSize) {
+      this.evictIfNecessary(currentSize - targetSize);
+      console.log(`Memory pressure handled: reduced cache by ${Math.round((currentSize - this.getTotalSize()) / 1024)}KB`);
     }
   }
 }
@@ -396,32 +894,306 @@ export class MCPServer {
   }
 }
 
-// === PARALLEL PROCESSOR ===
+// === ADVANCED PARALLEL PROCESSOR ===
+
+export interface TaskResult<T> {
+  id: string;
+  result: T;
+  duration: number;
+  success: boolean;
+  error?: Error;
+  retries?: number;
+}
+
+export interface ProcessingOptions {
+  maxConcurrency?: number;
+  timeout?: number;
+  retries?: number;
+  retryDelay?: number;
+  priority?: 'low' | 'normal' | 'high';
+  batchSize?: number;
+}
 
 export class ParallelProcessor extends EventEmitter {
-  private workers: Worker[] = [];
-  private queue: Array<{ id: string; task: any }> = [];
-  private processing = new Map<string, Worker>();
+  private activeJobs = new Map<string, Promise<any>>();
+  private stats = {
+    processed: 0,
+    failed: 0,
+    totalDuration: 0,
+    averageDuration: 0
+  };
+
+  private maxConcurrency: number;
+  private timeout: number;
+  private enabled: boolean;
 
   constructor(private config: InfrastructureConfig = {}) {
     super();
-    this.initializeWorkers();
+    this.maxConcurrency = config.parallel?.workers || 4;
+    this.timeout = config.parallel?.timeout || 30000;
+    this.enabled = true;
+
+    // Handle memory pressure
+    process.on('warning', (warning) => {
+      if (warning.name === 'MaxListenersExceededWarning') {
+        this.handleMemoryPressure();
+      }
+    });
   }
 
-  private initializeWorkers(): void {
-    const workerCount = this.config.parallel?.workers || 4;
-    // Workers would be initialized here in production
+  /**
+   * Process tasks in parallel with advanced control
+   */
+  async process<T, R>(
+    tasks: T[],
+    processor: (task: T, index: number) => Promise<R> | R,
+    options: ProcessingOptions = {}
+  ): Promise<TaskResult<R>[]> {
+    if (!this.enabled || tasks.length === 0) {
+      return tasks.map((task, i) => ({
+        id: `task_${i}`,
+        result: undefined as any,
+        duration: 0,
+        success: false,
+        error: new Error('Parallel processing disabled or no tasks')
+      }));
+    }
+
+    const {
+      maxConcurrency = this.maxConcurrency,
+      timeout = this.timeout,
+      retries = 2,
+      retryDelay = 1000,
+      batchSize = 10
+    } = options;
+
+    const results: TaskResult<R>[] = [];
+    const startTime = Date.now();
+
+    // Process tasks in controlled batches
+    for (let i = 0; i < tasks.length; i += batchSize) {
+      const batch = tasks.slice(i, i + batchSize);
+      const batchPromises = batch.map((task, batchIndex) =>
+        this.processTaskWithRetries(
+          task,
+          i + batchIndex,
+          processor,
+          { timeout, retries, retryDelay }
+        )
+      );
+
+      // Control concurrency by processing in smaller chunks
+      const chunkSize = Math.min(maxConcurrency, batchPromises.length);
+      for (let j = 0; j < batchPromises.length; j += chunkSize) {
+        const chunk = batchPromises.slice(j, j + chunkSize);
+        const chunkResults = await Promise.allSettled(chunk);
+
+        results.push(...chunkResults.map((result, chunkIndex) => {
+          const taskIndex = i + j + chunkIndex;
+          if (result.status === 'fulfilled') {
+            return result.value;
+          } else {
+            return {
+              id: `task_${taskIndex}`,
+              result: undefined as any,
+              duration: 0,
+              success: false,
+              error: result.reason
+            };
+          }
+        }));
+      }
+
+      // Brief pause between batches to prevent overwhelming
+      if (i + batchSize < tasks.length) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    }
+
+    // Update statistics
+    const totalDuration = Date.now() - startTime;
+    const successful = results.filter(r => r.success).length;
+    const failed = results.length - successful;
+
+    this.stats.processed += successful;
+    this.stats.failed += failed;
+    this.stats.totalDuration += totalDuration;
+    this.stats.averageDuration = this.stats.totalDuration / (this.stats.processed + this.stats.failed);
+
+    this.emit('batchComplete', {
+      total: tasks.length,
+      successful,
+      failed,
+      duration: totalDuration,
+      averageTaskDuration: totalDuration / tasks.length
+    });
+
+    return results;
   }
 
-  async process<T>(tasks: T[], processor: (task: T) => any): Promise<any[]> {
-    // Simplified parallel processing
-    return Promise.all(tasks.map(processor));
+  /**
+   * Process a single task with retries and error handling
+   */
+  private async processTaskWithRetries<T, R>(
+    task: T,
+    index: number,
+    processor: (task: T, index: number) => Promise<R> | R,
+    options: { timeout: number; retries: number; retryDelay: number }
+  ): Promise<TaskResult<R>> {
+    const taskId = `task_${index}`;
+    const startTime = Date.now();
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= options.retries; attempt++) {
+      try {
+        // Create timeout promise
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error(`Task ${taskId} timed out after ${options.timeout}ms`)), options.timeout);
+        });
+
+        // Process the task with timeout
+        const result = await Promise.race([
+          Promise.resolve(processor(task, index)),
+          timeoutPromise
+        ]);
+
+        const duration = Date.now() - startTime;
+
+        return {
+          id: taskId,
+          result,
+          duration,
+          success: true,
+          retries: attempt
+        };
+
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        // If not the last attempt, wait before retrying
+        if (attempt < options.retries) {
+          await new Promise(resolve => setTimeout(resolve, options.retryDelay * (attempt + 1)));
+        }
+      }
+    }
+
+    const duration = Date.now() - startTime;
+    return {
+      id: taskId,
+      result: undefined as any,
+      duration,
+      success: false,
+      error: lastError,
+      retries: options.retries
+    };
+  }
+
+  /**
+   * Process schemas in parallel with smart batching
+   */
+  async processSchemas(schemas: any[], processor: (schema: any) => Promise<any>): Promise<any[]> {
+    const options: ProcessingOptions = {
+      maxConcurrency: Math.min(this.maxConcurrency, schemas.length),
+      batchSize: Math.max(1, Math.floor(schemas.length / 4)), // Dynamic batch sizing
+      timeout: this.timeout,
+      retries: 1 // More conservative for schema processing
+    };
+
+    const results = await this.process(schemas, processor, options);
+
+    return results.map(result => result.success ? result.result : null).filter(Boolean);
+  }
+
+  /**
+   * Process files in parallel with file system optimizations
+   */
+  async processFiles(
+    filePaths: string[],
+    processor: (filePath: string, content: string) => Promise<any>
+  ): Promise<any[]> {
+    const fileProcessor = async (filePath: string) => {
+      try {
+        const content = await fs.promises.readFile(filePath, 'utf8');
+        return await processor(filePath, content);
+      } catch (error) {
+        throw new Error(`Failed to process file ${filePath}: ${error}`);
+      }
+    };
+
+    const results = await this.process(filePaths, fileProcessor, {
+      maxConcurrency: Math.min(8, filePaths.length), // Limit file I/O concurrency
+      timeout: this.timeout * 2, // Allow more time for file operations
+      retries: 2,
+      batchSize: 20
+    });
+
+    return results.map(result => result.success ? result.result : null).filter(Boolean);
+  }
+
+  /**
+   * Handle memory pressure by reducing concurrency
+   */
+  private handleMemoryPressure(): void {
+    this.maxConcurrency = Math.max(1, Math.floor(this.maxConcurrency * 0.7));
+    this.emit('memoryPressure', { newConcurrency: this.maxConcurrency });
+
+    console.warn(`Memory pressure detected, reducing concurrency to ${this.maxConcurrency}`);
+  }
+
+  /**
+   * Get processing statistics
+   */
+  getStats() {
+    return {
+      ...this.stats,
+      currentConcurrency: this.maxConcurrency,
+      activeJobs: this.activeJobs.size,
+      enabled: this.enabled
+    };
+  }
+
+  /**
+   * Adjust performance settings dynamically
+   */
+  adjustPerformance(options: { maxConcurrency?: number; timeout?: number }) {
+    if (options.maxConcurrency) {
+      this.maxConcurrency = Math.max(1, Math.min(32, options.maxConcurrency));
+    }
+    if (options.timeout) {
+      this.timeout = Math.max(1000, options.timeout);
+    }
+
+    this.emit('performanceAdjusted', { maxConcurrency: this.maxConcurrency, timeout: this.timeout });
+  }
+
+  /**
+   * Enable/disable parallel processing
+   */
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    if (!enabled) {
+      this.activeJobs.clear();
+    }
   }
 
   async shutdown(): Promise<void> {
-    // Terminate all workers
-    await Promise.all(this.workers.map(w => w.terminate()));
-    this.workers = [];
+    this.enabled = false;
+
+    // Wait for active jobs to complete with timeout
+    const activeJobsArray = Array.from(this.activeJobs.values());
+    if (activeJobsArray.length > 0) {
+      try {
+        await Promise.race([
+          Promise.all(activeJobsArray),
+          new Promise(resolve => setTimeout(resolve, 5000)) // 5s timeout
+        ]);
+      } catch (error) {
+        console.warn('Some jobs did not complete during shutdown:', error);
+      }
+    }
+
+    this.activeJobs.clear();
+    this.removeAllListeners();
   }
 }
 
@@ -501,16 +1273,65 @@ export class Infrastructure {
   public parallel: ParallelProcessor;
   public monitor: HealthMonitor;
   public reporter: ErrorReporter;
+  public memoryOptimizer: MemoryOptimizer;
+  public streamingProcessor: StreamingProcessor;
+  public progressiveLoader?: ProgressiveLoader;
 
   constructor(config: InfrastructureConfig = {}) {
-    this.discovery = new SchemaDiscovery(config);
+    this.memoryOptimizer = new MemoryOptimizer({
+      autoGC: true,
+      gcThreshold: 150 * 1024 * 1024, // 150MB
+      enableProfiling: false
+    });
+
+    this.streamingProcessor = new StreamingProcessor({
+      chunkSize: 64 * 1024, // 64KB chunks
+      maxConcurrentStreams: 3,
+      memoryLimit: 200 * 1024 * 1024 // 200MB limit
+    });
+
     this.cache = new SchemaCache(config);
+    this.monitor = new HealthMonitor(config);
+
+    // Create a simple logger for the progressive loader
+    const logger = {
+      info: (msg: string, ...args: any[]) => console.log(`ℹ️  ${msg}`, ...args),
+      debug: (msg: string, ...args: any[]) => console.debug(`🐛 ${msg}`, ...args),
+      warn: (msg: string, ...args: any[]) => console.warn(`⚠️  ${msg}`, ...args),
+      error: (msg: string, ...args: any[]) => console.error(`❌ ${msg}`, ...args)
+    };
+
+    // Initialize progressive loader if configured
+    if (config.progressive) {
+      this.progressiveLoader = new ProgressiveLoader(config.progressive, this.monitor as any, logger);
+    }
+
+    this.discovery = new SchemaDiscovery(config, this.cache, this.monitor, logger);
     this.mapper = new SchemaMapper();
     this.validator = new Validator();
     this.mcp = new MCPServer(config);
     this.parallel = new ParallelProcessor(config);
-    this.monitor = new HealthMonitor(config);
     this.reporter = new ErrorReporter();
+
+    this.setupMemoryOptimization();
+  }
+
+  private setupMemoryOptimization(): void {
+    // Connect memory optimizer to other components
+    this.memoryOptimizer.on('highPressure', () => {
+      this.cache.handleMemoryPressure();
+      this.parallel.adjustPerformance({ maxConcurrency: 2 });
+    });
+
+    this.memoryOptimizer.on('criticalPressure', () => {
+      this.cache.handleMemoryPressure();
+      this.parallel.adjustPerformance({ maxConcurrency: 1 });
+    });
+
+    // Handle cache pressure
+    this.cache.on?.('memoryPressure', () => {
+      console.log(`${pc.yellow('📦 Cache memory pressure - reducing cache size')}`);
+    });
   }
 
   async initialize(): Promise<void> {
@@ -521,8 +1342,57 @@ export class Infrastructure {
     await this.cache.persist();
     await this.mcp.stop();
     await this.parallel.shutdown();
+    await this.streamingProcessor.shutdown();
+    if (this.progressiveLoader) {
+      await this.progressiveLoader.clearCache();
+    }
+    this.memoryOptimizer.shutdown();
     this.monitor.stop();
   }
+
+  // === HOT RELOADING SUPPORT ===
+
+  async discoverSchemas(): Promise<SchemaInfo[]> {
+    if (this.progressiveLoader) {
+      const schemasMap = await this.progressiveLoader.loadSchemas([]);
+      return Array.from(schemasMap.values());
+    }
+    return await this.discovery.discover();
+  }
+
+  async discoverSchemasInFile(filePath: string): Promise<SchemaInfo[]> {
+    if (this.progressiveLoader) {
+      const schemasMap = await this.progressiveLoader.loadSchemas([filePath]);
+      return Array.from(schemasMap.values()).filter(schema => schema.filePath === filePath);
+    }
+    return await this.discovery.discoverInFile(filePath);
+  }
+
+  async invalidateCache(filePath?: string): Promise<void> {
+    if (filePath) {
+      await this.cache.invalidate(filePath);
+      if (this.progressiveLoader) {
+        await this.progressiveLoader.invalidateFile(filePath);
+      }
+    } else {
+      await this.cache.clear();
+      if (this.progressiveLoader) {
+        await this.progressiveLoader.clearCache();
+      }
+    }
+  }
+}
+
+// === EXPORTS FOR BACKWARD COMPATIBILITY ===
+
+// === INFRASTRUCTURE FACTORY ===
+
+export function createInfrastructure(
+  config: InfrastructureConfig,
+  performanceMonitor?: any,
+  logger?: any
+): Infrastructure {
+  return new Infrastructure(config);
 }
 
 // === EXPORTS FOR BACKWARD COMPATIBILITY ===

@@ -5,6 +5,7 @@ import fg from 'fast-glob';
 import { SchemaTester, TestingOptions, TestSuite } from '../../core/schema-testing';
 import { SchemaDiscovery } from '../../core/infrastructure';
 import { ConfigManager } from '../../core/config';
+import { TestingInfrastructure, TestRunConfig } from '../../core/testing-infrastructure';
 import { z } from 'zod';
 
 export interface TestCommandOptions {
@@ -37,6 +38,11 @@ export interface TestCommandOptions {
   reportLevel?: 'minimal' | 'standard' | 'detailed' | 'verbose';
   failFast?: boolean;
   target?: string;
+  // New comprehensive testing options
+  contract?: boolean;
+  mutation?: boolean;
+  regression?: boolean;
+  baseline?: boolean;
 }
 
 export async function testCommand(options: TestCommandOptions): Promise<void> {
@@ -51,12 +57,32 @@ export async function testCommand(options: TestCommandOptions): Promise<void> {
     const advancedTester = new SchemaTestingEngine();
     const discovery = new SchemaDiscovery(config);
 
+    // Initialize comprehensive testing infrastructure
+    const testingInfra = new TestingInfrastructure({
+      coverage: options.coverage,
+      performance: options.performance,
+      contract: options.contract,
+      mutation: options.mutation,
+      parallel: options.parallel,
+      timeout: options.timeout,
+      retries: 0,
+      bail: options.bail,
+      verbose: options.verbose,
+      outputFormat: options.format === 'json' ? 'json' : 'console'
+    }, {} as any);
+
     // Set up event listeners for progress reporting
     setupEventListeners(tester, options);
 
     // Advanced testing mode with comprehensive fuzzing
     if (options.advanced || options.intensity || options.iterations) {
       await runAdvancedTesting(advancedTester, options);
+      return;
+    }
+
+    // Comprehensive testing mode with new infrastructure
+    if (options.contract || options.mutation || options.regression) {
+      await runComprehensiveTesting(testingInfra, discovery, options);
       return;
     }
 
@@ -868,6 +894,205 @@ async function loadSchemaExports(filePath: string): Promise<Record<string, any>>
 
 function isZodSchema(value: any): boolean {
   return value && typeof value === 'object' && value._def?.typeName;
+}
+
+async function runComprehensiveTesting(
+  testingInfra: TestingInfrastructure,
+  discovery: SchemaDiscovery,
+  options: TestCommandOptions
+): Promise<void> {
+  console.log(pc.cyan('\n🚀 Comprehensive Schema Testing Suite'));
+  console.log(pc.gray('Running advanced testing with contract, mutation, and regression analysis\n'));
+
+  // Discover schemas
+  const schemas = await discovery.findSchemas({ useCache: true });
+
+  if (schemas.length === 0) {
+    console.log(pc.yellow('⚠️  No schemas found for comprehensive testing'));
+    return;
+  }
+
+  console.log(pc.blue(`Found ${schemas.length} schema(s) for comprehensive testing`));
+
+  const startTime = Date.now();
+  const results: any = {};
+
+  try {
+    // 1. Generate tests from schemas
+    console.log(pc.cyan('\n📋 Test Generation'));
+    console.log(pc.gray('─'.repeat(50)));
+
+    const generatedTests = await testingInfra.generateTests(schemas);
+    console.log(`  Generated ${pc.green(generatedTests.length)} test suite${generatedTests.length !== 1 ? 's' : ''} from schemas`);
+
+    // 2. Run validation tests
+    console.log(pc.cyan('\n✅ Validation Testing'));
+    console.log(pc.gray('─'.repeat(50)));
+
+    const testConfig: TestRunConfig = {
+      coverage: options.coverage,
+      performance: options.performance,
+      parallel: options.parallel,
+      timeout: options.timeout,
+      bail: options.bail,
+      verbose: options.verbose
+    };
+
+    const testResults = await testingInfra.runTests(testConfig);
+    console.log(`  Executed ${testResults.length} test cases`);
+
+    const passed = testResults.filter(r => r.status === 'passed').length;
+    const failed = testResults.filter(r => r.status === 'failed').length;
+
+    console.log(`  ${pc.green('✓')} Passed: ${passed}`);
+    if (failed > 0) console.log(`  ${pc.red('✗')} Failed: ${failed}`);
+
+    results.validation = { total: testResults.length, passed, failed };
+
+    // 3. Contract testing
+    if (options.contract) {
+      console.log(pc.cyan('\n🤝 Contract Testing'));
+      console.log(pc.gray('─'.repeat(50)));
+
+      const contractResults = await testingInfra.runContractTests(schemas, {
+        compatibilityChecks: true,
+        versionTolerance: 'minor',
+        breakingChangeDetection: true
+      });
+
+      const compatible = contractResults.filter(r => r.compatible).length;
+      const breakingChanges = contractResults.reduce((sum, r) => sum + r.breakingChanges.length, 0);
+
+      console.log(`  Schemas tested: ${contractResults.length}`);
+      console.log(`  Compatible: ${compatible}/${contractResults.length}`);
+
+      if (breakingChanges > 0) {
+        console.log(`  ${pc.red('⚠')} Breaking changes detected: ${breakingChanges}`);
+      } else {
+        console.log(`  ${pc.green('✓')} No breaking changes detected`);
+      }
+
+      results.contract = { total: contractResults.length, compatible, breakingChanges };
+    }
+
+    // 4. Mutation testing
+    if (options.mutation) {
+      console.log(pc.cyan('\n🧬 Mutation Testing'));
+      console.log(pc.gray('─'.repeat(50)));
+
+      const mutationResults = await testingInfra.runMutationTests(schemas, {
+        mutationStrategies: ['optional-required', 'type-change', 'constraint-removal', 'boundary-value'],
+        targetCoverage: 80,
+        mutationTimeout: 10000
+      });
+
+      const avgScore = mutationResults.reduce((sum, r) => sum + r.mutationScore, 0) / mutationResults.length;
+      const totalMutations = mutationResults.reduce((sum, r) => sum + r.mutationsGenerated, 0);
+
+      console.log(`  Schemas tested: ${mutationResults.length}`);
+      console.log(`  Mutations generated: ${totalMutations}`);
+      console.log(`  Average mutation score: ${avgScore.toFixed(1)}%`);
+
+      if (avgScore < 80) {
+        console.log(`  ${pc.yellow('⚠')} Low mutation coverage - consider adding more tests`);
+      } else {
+        console.log(`  ${pc.green('✓')} Good mutation coverage`);
+      }
+
+      results.mutation = { schemas: mutationResults.length, avgScore, totalMutations };
+    }
+
+    // 5. Performance benchmarks
+    if (options.performance) {
+      console.log(pc.cyan('\n⚡ Performance Benchmarks'));
+      console.log(pc.gray('─'.repeat(50)));
+
+      const perfResults = await testingInfra.runBenchmarks(schemas, {
+        iterations: options.iterations || 1000,
+        warmupRounds: 100,
+        maxExecutionTime: 5000,
+        memoryThreshold: 100 * 1024 * 1024,
+        baseline: options.baseline ? 'current' : undefined
+      });
+
+      const avgThroughput = perfResults.reduce((sum, r) => sum + r.throughput, 0) / perfResults.length;
+      const regressions = perfResults.filter(r => r.regressionDetected).length;
+
+      console.log(`  Benchmarks run: ${perfResults.length}`);
+      console.log(`  Average throughput: ${avgThroughput.toFixed(0)} ops/sec`);
+
+      if (regressions > 0) {
+        console.log(`  ${pc.red('⚠')} Performance regressions: ${regressions}`);
+      } else {
+        console.log(`  ${pc.green('✓')} No performance regressions detected`);
+      }
+
+      results.performance = { benchmarks: perfResults.length, avgThroughput, regressions };
+    }
+
+    // 6. Coverage analysis
+    if (options.coverage) {
+      console.log(pc.cyan('\n📊 Coverage Analysis'));
+      console.log(pc.gray('─'.repeat(50)));
+
+      const coverageResults = await testingInfra.analyzeCoverage(testResults);
+      console.log(`  Coverage analysis: enabled`);
+
+      if (coverageResults.coveragePercentage !== undefined) {
+        const color = coverageResults.coveragePercentage >= 80 ? pc.green :
+                     coverageResults.coveragePercentage >= 60 ? pc.yellow : pc.red;
+        console.log(`  Schema coverage: ${color(`${coverageResults.coveragePercentage.toFixed(1)}%`)}`);
+      }
+
+      results.coverage = coverageResults;
+    }
+
+    // Final summary
+    const duration = Date.now() - startTime;
+    const statistics = testingInfra.getTestStatistics();
+
+    console.log(pc.cyan('\n📋 Comprehensive Test Summary'));
+    console.log(pc.gray('─'.repeat(50)));
+    console.log(`  Duration: ${duration}ms`);
+    console.log(`  Schemas tested: ${schemas.length}`);
+    console.log(`  Test infrastructure: ${statistics.testSuites} suites`);
+
+    if (results.validation) {
+      const passRate = ((results.validation.passed / results.validation.total) * 100).toFixed(1);
+      const color = results.validation.failed === 0 ? pc.green : pc.red;
+      console.log(`  Validation pass rate: ${color(`${passRate}%`)}`);
+    }
+
+    if (results.contract) {
+      console.log(`  Contract compatibility: ${results.contract.breakingChanges === 0 ? pc.green('✓ Compatible') : pc.red(`${results.contract.breakingChanges} breaking changes`)}`);
+    }
+
+    if (results.mutation) {
+      const scoreColor = results.mutation.avgScore >= 80 ? pc.green :
+                        results.mutation.avgScore >= 60 ? pc.yellow : pc.red;
+      console.log(`  Mutation score: ${scoreColor(`${results.mutation.avgScore.toFixed(1)}%`)}`);
+    }
+
+    if (results.performance) {
+      console.log(`  Performance: ${results.performance.regressions === 0 ? pc.green('✓ No regressions') : pc.red(`${results.performance.regressions} regressions`)}`);
+    }
+
+    // Exit code based on results
+    const hasFailures = results.validation?.failed > 0 ||
+                       results.contract?.breakingChanges > 0 ||
+                       results.performance?.regressions > 0;
+
+    if (hasFailures) {
+      console.log(pc.red('\n❌ Comprehensive testing completed with issues'));
+      process.exit(1);
+    } else {
+      console.log(pc.green('\n✅ All comprehensive tests passed!'));
+    }
+
+  } catch (error) {
+    console.log(pc.red(`❌ Comprehensive testing failed: ${error instanceof Error ? error.message : String(error)}`));
+    process.exit(1);
+  }
 }
 
 async function loadSchemaModule(_filePath: string, schemaName: string): Promise<any> {
