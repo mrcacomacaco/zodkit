@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/JSONbored/zodkit/zodkit.schema.json",
+  "title": "zodkit Configuration",
+  "description": "Configuration schema for zodkit - Zod schema validator",
+  "type": "object",
+  "properties": {
+    "schemas": {
+      "description": "Schema detection configuration",
+      "type": "object",
+      "properties": {
+        "patterns": {
+          "description": "Glob patterns for finding schema files",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["./lib/schemas/**/*.ts", "./src/schemas/**/*.ts"]
+        },
+        "exclude": {
+          "description": "Patterns to exclude from schema detection",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["**/*.test.ts", "**/*.spec.ts", "**/*.d.ts"]
+        }
+      }
+    },
+    "targets": {
+      "description": "Validation targets configuration",
+      "type": "object",
+      "properties": {
+        "mdx": {
+          "description": "MDX file validation settings",
+          "type": "object",
+          "properties": {
+            "patterns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "frontmatterSchemas": {
+              "type": "string",
+              "enum": ["auto", "manual"]
+            }
+          }
+        },
+        "components": {
+          "description": "React component validation settings",
+          "type": "object",
+          "properties": {
+            "patterns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "propSchemas": {
+              "type": "string",
+              "enum": ["auto", "manual"]
+            }
+          }
+        },
+        "api": {
+          "description": "API validation settings",
+          "type": "object",
+          "properties": {
+            "patterns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "requestSchemas": {
+              "type": "string",
+              "enum": ["auto", "manual"]
+            },
+            "responseSchemas": {
+              "type": "string",
+              "enum": ["auto", "manual"]
+            }
+          }
+        }
+      }
+    },
+    "rules": {
+      "description": "Validation rules configuration",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["error", "warn", "off"]
+      }
+    },
+    "output": {
+      "description": "Output configuration",
+      "type": "object",
+      "properties": {
+        "format": {
+          "description": "Output format",
+          "type": "string",
+          "enum": ["pretty", "json", "junit", "sarif"],
+          "default": "pretty"
+        },
+        "verbose": {
+          "description": "Enable verbose output",
+          "type": "boolean",
+          "default": false
+        },
+        "showSuccessful": {
+          "description": "Show successful validations",
+          "type": "boolean",
+          "default": false
+        },
+        "quiet": {
+          "description": "Suppress non-error output",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "performance": {
+      "description": "Performance settings",
+      "type": "object",
+      "properties": {
+        "maxConcurrency": {
+          "description": "Maximum concurrent file processing",
+          "type": "number",
+          "minimum": 1,
+          "default": 10
+        },
+        "cache": {
+          "description": "Enable caching",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "include": {
+      "description": "Additional patterns to include",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "exclude": {
+      "description": "Additional patterns to exclude",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "verbose": {
+      "description": "Enable verbose mode",
+      "type": "boolean",
+      "default": false
+    },
+    "ci": {
+      "description": "CI mode configuration",
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "additionalProperties": false
+}

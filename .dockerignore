@@ -1,0 +1,81 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist
+coverage
+docs
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Development
+*.log
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Testing
+coverage
+.nyc_output
+.coverage
+
+# Temporary files
+*.tmp
+*.temp
+.cache
+
+# Documentation source (keep built docs)
+docs/src
+
+# Scripts that aren't needed in container
+scripts/*.sh
+scripts/*.ps1
+
+# Package files
+*.tgz
+*.tar.gz
+
+# Chocolatey and Homebrew
+choco/
+homebrew/
+
+# Development configuration
+.editorconfig
+.eslintrc*
+.prettierrc*
+jest.config.*
+typedoc.*
+
+# Backup files
+*.backup
+*.bak

@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # Main zodkit service for CLI operations
+  zodkit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: zodkit:latest
+    container_name: zodkit-cli
+    volumes:
+      # Mount current directory as workspace
+      - .:/workspace:ro
+      # Mount output directory for reports
+      - ./reports:/workspace/reports
+    working_dir: /workspace
+    environment:
+      - NODE_ENV=production
+      - ZODDED_LOG_LEVEL=info
+    # Override entrypoint for interactive use
+    entrypoint: ["dumb-init", "--", "node", "/app/dist/cli/index.js"]
+    command: ["--help"]
+    profiles: ["cli"]
+
+  # Development service with watch mode
+  zodkit-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: zodkit:latest
+    container_name: zodkit-dev
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      - NODE_ENV=development
+      - ZODDED_LOG_LEVEL=debug
+    entrypoint: ["dumb-init", "--", "node", "/app/dist/cli/index.js"]
+    command: ["check", "--watch", "--verbose"]
+    profiles: ["dev"]
+
+  # CI/CD service for automated checks
+  zodkit-ci:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: zodkit:latest
+    container_name: zodkit-ci
+    volumes:
+      - .:/workspace:ro
+      - ./ci-reports:/workspace/ci-reports
+    working_dir: /workspace
+    environment:
+      - NODE_ENV=production
+      - ZODDED_LOG_LEVEL=warn
+      - CI=true
+    entrypoint: ["dumb-init", "--", "node", "/app/dist/cli/index.js"]
+    command: ["check", "--ci", "--format", "json", "--output", "ci-reports/zodkit-results.json"]
+    profiles: ["ci"]
+
+  # Performance testing service
+  zodkit-benchmark:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: zodkit:latest
+    container_name: zodkit-benchmark
+    volumes:
+      - .:/workspace:ro
+      - ./benchmark-results:/workspace/benchmark-results
+    working_dir: /workspace
+    environment:
+      - NODE_ENV=production
+      - ZODDED_LOG_LEVEL=info
+    entrypoint: ["dumb-init", "--", "node", "/app/dist/cli/index.js"]
+    command: ["benchmark", "--save", "--output", "benchmark-results"]
+    profiles: ["benchmark"]
+
+# Networks
+networks:
+  default:
+    name: zodkit-network
+
+# Volumes for persistent data
+volumes:
+  zodkit-cache:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/.zodkit-cache

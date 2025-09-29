@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>zodkit</id>
+    <version>0.1.0</version>
+    <packageSourceUrl>https://github.com/JSONbored/zodkit</packageSourceUrl>
+    <owners>JSONbored</owners>
+    <title>zodkit</title>
+    <authors>JSONbored</authors>
+    <projectUrl>https://github.com/JSONbored/zodkit</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/JSONbored/zodkit/main/assets/icon.png</iconUrl>
+    <copyright>2025 JSONbored</copyright>
+    <licenseUrl>https://github.com/JSONbored/zodkit/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/JSONbored/zodkit</projectSourceUrl>
+    <docsUrl>https://github.com/JSONbored/zodkit#readme</docsUrl>
+    <bugTrackerUrl>https://github.com/JSONbored/zodkit/issues</bugTrackerUrl>
+    <tags>zod schema validation typescript cli development-tools</tags>
+    <summary>Modern CLI tool for static analysis and validation of Zod schemas</summary>
+    <description><![CDATA[
+zodkit is a powerful CLI tool designed for static analysis and validation of Zod schemas in TypeScript projects. It provides comprehensive schema validation, automatic error fixing, performance monitoring, and integration with popular development workflows.
+
+## Features
+
+- **Schema Validation**: Comprehensive validation of Zod schemas with detailed error reporting
+- **Auto-Fix**: Intelligent automatic fixing of common schema validation issues
+- **Performance Monitoring**: Built-in benchmarking and performance analysis
+- **Multiple Output Formats**: Support for pretty, JSON, JUnit, and SARIF output formats
+- **Watch Mode**: Real-time validation during development
+- **Coverage Analysis**: Track schema usage and coverage across your codebase
+- **CI/CD Integration**: Seamless integration with continuous integration pipelines
+- **Multiple Targets**: Support for MDX frontmatter, React props, API schemas, and more
+
+## Installation Requirements
+
+- Node.js 18.0.0 or higher
+- npm, yarn, pnpm, or bun package manager
+
+## Usage
+
+After installation, zodkit will be available globally:
+
+```
+zodkit --help
+zodkit init
+zodkit check
+zodkit fix
+```
+
+For detailed usage instructions, visit: https://github.com/JSONbored/zodkit#readme
+]]></description>
+    <releaseNotes>https://github.com/JSONbored/zodkit/blob/main/CHANGELOG.md</releaseNotes>
+    <dependencies>
+      <dependency id="nodejs" version="18.0.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+    <file src="legal\**" target="legal" />
+  </files>
+</package>

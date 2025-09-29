@@ -1,0 +1,28 @@
+VERIFICATION
+Verification is intended to assist the Chocolatey moderators and community
+in verifying that this package's contents are trustworthy.
+
+Package: zodkit
+Version: 0.1.0
+
+The package zodkit is distributed as an npm package and installed via npm.
+
+1. Download npm package:
+   npm view zodkit@0.1.0 dist.tarball
+   https://registry.npmjs.org/zodkit/-/zodkit-0.1.0.tgz
+
+2. Verification can be done by:
+   - Checking the npm registry: https://www.npmjs.com/package/zodkit
+   - Verifying the GitHub repository: https://github.com/JSONbored/zodkit
+   - Checking package integrity: npm view zodkit@0.1.0 dist.integrity
+
+3. The package is installed using npm install -g zodkit@0.1.0
+
+4. Source code is available at: https://github.com/JSONbored/zodkit
+
+5. License verification:
+   - License: MIT
+   - License URL: https://github.com/JSONbored/zodkit/blob/main/LICENSE
+
+This package installs zodkit globally via npm, making it available as a command-line tool.
+No binaries are included directly in this Chocolatey package.

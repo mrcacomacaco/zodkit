@@ -1,0 +1,58 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["./src/index.ts"],
+  "out": "./docs/api",
+  "name": "zodkit API Documentation",
+  "includeVersion": true,
+  "excludeExternals": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": false,
+  "readme": "./README.md",
+  "theme": "default",
+  "hideGenerator": false,
+  "sort": ["source-order"],
+  "kindSortOrder": [
+    "Document",
+    "Project",
+    "Module",
+    "Namespace",
+    "Enum",
+    "EnumMember",
+    "Class",
+    "Interface",
+    "Constructor",
+    "Property",
+    "Variable",
+    "Function",
+    "Accessor",
+    "Method",
+    "Parameter",
+    "TypeParameter",
+    "TypeAlias",
+    "Reference"
+  ],
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Core",
+    "Validation",
+    "Configuration",
+    "Discovery",
+    "Reporting",
+    "Utilities",
+    "Types"
+  ],
+  "searchInComments": true,
+  "searchInDocuments": true,
+  "cleanOutputDir": true,
+  "sourceLinkTemplate": "https://github.com/JSONbored/zodkit/blob/main/{path}#L{line}",
+  "gitRevision": "main",
+  "navigationLinks": {
+    "GitHub": "https://github.com/JSONbored/zodkit",
+    "NPM": "https://www.npmjs.com/package/zodkit"
+  },
+  "sidebarLinks": {
+    "Documentation": "https://github.com/JSONbored/zodkit#readme",
+    "Issues": "https://github.com/JSONbored/zodkit/issues"
+  }
+}

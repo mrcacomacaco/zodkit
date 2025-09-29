@@ -1,0 +1,320 @@
+import { existsSync } from 'fs';
+import { resolve } from 'path';
+import { z } from 'zod';
+import { withRetry, withGracefulDegradation } from '../utils/error-recovery';
+import { logger } from '../utils/logger';
+
+// Define the configuration schema
+const ConfigSchema = z.object({
+  schemas: z.object({
+    patterns: z.array(z.string()).default(['./lib/schemas/**/*.ts', './src/types/**/*.ts']),
+    exclude: z.array(z.string()).default(['**/*.test.ts', '**/*.spec.ts'])
+  }).default({
+    patterns: ['./lib/schemas/**/*.ts', './src/types/**/*.ts'],
+    exclude: ['**/*.test.ts', '**/*.spec.ts']
+  }),
+
+  targets: z.object({
+    mdx: z.object({
+      patterns: z.array(z.string()).default(['./content/**/*.mdx']),
+      frontmatterSchemas: z.union([z.literal('auto'), z.record(z.string(), z.string())]).default('auto')
+    }).optional(),
+
+    components: z.object({
+      patterns: z.array(z.string()).default(['./components/**/*.tsx', './src/**/*.tsx']),
+      propSchemas: z.union([z.literal('auto'), z.record(z.string(), z.string())]).default('auto')
+    }).optional(),
+
+    api: z.object({
+      patterns: z.array(z.string()).default(['./pages/api/**/*.ts', './src/api/**/*.ts']),
+      requestSchemas: z.union([z.literal('auto'), z.record(z.string(), z.string())]).default('auto'),
+      responseSchemas: z.union([z.literal('auto'), z.record(z.string(), z.string())]).default('auto')
+    }).optional()
+  }).default({}),
+
+  rules: z.object({
+    // Legacy rules
+    'require-validation': z.enum(['error', 'warn', 'off']).default('error'),
+    'no-any-fallback': z.enum(['error', 'warn', 'off']).default('warn'),
+    'prefer-strict-schemas': z.enum(['error', 'warn', 'off']).default('warn'),
+
+    // Prohibition Rules (no*)
+    'no-any-types': z.enum(['error', 'warn', 'off']).default('error'),
+    'no-unknown-fallback': z.enum(['error', 'warn', 'off']).default('warn'),
+    'no-implicit-any': z.enum(['error', 'warn', 'off']).default('error'),
+    'no-unsafe-coercion': z.enum(['error', 'warn', 'off']).default('warn'),
+    'no-empty-schema': z.enum(['error', 'warn', 'off']).default('error'),
+    'no-missing-validation': z.enum(['error', 'warn', 'off']).default('error'),
+    'no-unused-schemas': z.enum(['error', 'warn', 'off']).default('warn'),
+    'no-circular-refs': z.enum(['error', 'warn', 'off']).default('error'),
+    'no-duplicate-schemas': z.enum(['error', 'warn', 'off']).default('warn'),
+    'no-unsafe-transforms': z.enum(['error', 'warn', 'off']).default('error'),
+    'no-sensitive-defaults': z.enum(['error', 'warn', 'off']).default('error'),
+    'no-weak-validation': z.enum(['error', 'warn', 'off']).default('warn'),
+
+    // Best Practice Rules (use*, prefer*)
+    'use-strict-schemas': z.enum(['error', 'warn', 'off']).default('warn'),
+    'use-descriptive-names': z.enum(['error', 'warn', 'off']).default('warn'),
+    'use-consistent-naming': z.enum(['error', 'warn', 'off']).default('warn'),
+    'prefer-union': z.enum(['error', 'warn', 'off']).default('warn'),
+    'prefer-native-types': z.enum(['error', 'warn', 'off']).default('warn'),
+    'use-exhaustive-validation': z.enum(['error', 'warn', 'off']).default('error'),
+    'use-error-messages': z.enum(['error', 'warn', 'off']).default('warn'),
+    'use-min-max-constraints': z.enum(['error', 'warn', 'off']).default('warn'),
+    'use-format-validation': z.enum(['error', 'warn', 'off']).default('error'),
+    'use-lazy-schemas': z.enum(['error', 'warn', 'off']).default('warn'),
+    'use-optimal-parsing': z.enum(['error', 'warn', 'off']).default('warn'),
+
+    // Schema Quality Rules
+    'no-redundant-optional': z.enum(['error', 'warn', 'off']).default('warn'),
+    'no-loose-objects': z.enum(['error', 'warn', 'off']).default('warn'),
+    'prefer-specific-types': z.enum(['error', 'warn', 'off']).default('warn'),
+    'use-branded-types': z.enum(['error', 'warn', 'off']).default('off'),
+    'no-complex-unions': z.enum(['error', 'warn', 'off']).default('warn'),
+
+    // Performance Rules
+    'no-expensive-parsing': z.enum(['error', 'warn', 'off']).default('warn'),
+    'prefer-parse-over-safeParse': z.enum(['error', 'warn', 'off']).default('off'),
+    'use-efficient-transforms': z.enum(['error', 'warn', 'off']).default('warn'),
+
+    // Security Rules
+    'no-eval-in-schemas': z.enum(['error', 'warn', 'off']).default('error'),
+    'validate-external-data': z.enum(['error', 'warn', 'off']).default('error'),
+    'no-prototype-pollution': z.enum(['error', 'warn', 'off']).default('error'),
+
+    // API/Integration Rules
+    'validate-api-responses': z.enum(['error', 'warn', 'off']).default('error'),
+    'validate-form-inputs': z.enum(['error', 'warn', 'off']).default('error'),
+    'validate-env-variables': z.enum(['error', 'warn', 'off']).default('warn')
+  }).default({
+    'require-validation': 'error',
+    'no-any-fallback': 'warn',
+    'prefer-strict-schemas': 'warn',
+    'no-any-types': 'error',
+    'no-unknown-fallback': 'warn',
+    'no-implicit-any': 'error',
+    'no-unsafe-coercion': 'warn',
+    'no-empty-schema': 'error',
+    'no-missing-validation': 'error',
+    'no-unused-schemas': 'warn',
+    'no-circular-refs': 'error',
+    'no-duplicate-schemas': 'warn',
+    'no-unsafe-transforms': 'error',
+    'no-sensitive-defaults': 'error',
+    'no-weak-validation': 'warn',
+    'use-strict-schemas': 'warn',
+    'use-descriptive-names': 'warn',
+    'use-consistent-naming': 'warn',
+    'prefer-union': 'warn',
+    'prefer-native-types': 'warn',
+    'use-exhaustive-validation': 'error',
+    'use-error-messages': 'warn',
+    'use-min-max-constraints': 'warn',
+    'use-format-validation': 'error',
+    'use-lazy-schemas': 'warn',
+    'use-optimal-parsing': 'warn',
+    'no-redundant-optional': 'warn',
+    'no-loose-objects': 'warn',
+    'prefer-specific-types': 'warn',
+    'use-branded-types': 'off',
+    'no-complex-unions': 'warn',
+    'no-expensive-parsing': 'warn',
+    'prefer-parse-over-safeParse': 'off',
+    'use-efficient-transforms': 'warn',
+    'no-eval-in-schemas': 'error',
+    'validate-external-data': 'error',
+    'no-prototype-pollution': 'error',
+    'validate-api-responses': 'error',
+    'validate-form-inputs': 'error',
+    'validate-env-variables': 'warn'
+  }),
+
+  output: z.object({
+    format: z.enum(['pretty', 'json', 'junit', 'sarif']).default('pretty'),
+    verbose: z.boolean().default(false),
+    showSuccessful: z.boolean().default(false)
+  }).default({
+    format: 'pretty',
+    verbose: false,
+    showSuccessful: false
+  }),
+
+  // File overrides system (like ESLint)
+  overrides: z.array(z.object({
+    files: z.array(z.string()),
+    excludes: z.array(z.string()).optional(),
+    rules: z.record(z.string(), z.union([
+      z.enum(['error', 'warn', 'off']),
+      z.object({
+        level: z.enum(['error', 'warn', 'off']),
+        options: z.record(z.string(), z.unknown()).optional()
+      })
+    ])).optional()
+  })).optional(),
+
+  // Ignore patterns (like .gitignore)
+  ignorePatterns: z.array(z.string()).default([
+    '**/node_modules/**',
+    '**/dist/**',
+    '**/build/**',
+    '**/.git/**',
+    '**/coverage/**',
+    '**/*.d.ts'
+  ]),
+
+  // CLI-specific options
+  include: z.array(z.string()).optional(),
+  exclude: z.array(z.string()).optional(),
+  verbose: z.boolean().optional(),
+  format: z.enum(['pretty', 'json', 'junit', 'sarif']).optional()
+});
+
+export type Config = z.infer<typeof ConfigSchema>;
+
+export class ConfigManager {
+  private _config: Config | null = null;
+
+  private readonly defaultConfigPaths = [
+    'zodkit.config.js',
+    'zodkit.config.ts',
+    'zod.config.js',
+    'zod.config.ts',
+    '.zodkitrc.js',
+    '.zodkitrc.ts'
+  ];
+
+  async loadConfig(configPath?: string): Promise<Config> {
+    this._config = await withGracefulDegradation(
+      async () => {
+        // Primary: Load custom config
+        const configFile = this.findConfigFile(configPath);
+
+        if (!configFile) {
+          logger.info('No configuration file found, using defaults');
+          return this.getDefaultConfig();
+        }
+
+        return withRetry(
+          async () => {
+            const config = await this.loadConfigFile(configFile);
+            return this.validateAndNormalizeConfig(config);
+          },
+          'load-config',
+          { maxAttempts: 2, initialDelay: 500 }
+        );
+      },
+      () => {
+        // Fallback: Use default config
+        logger.warn('Failed to load custom configuration, falling back to defaults');
+        return Promise.resolve(this.getDefaultConfig());
+      },
+      'load-configuration'
+    );
+    return this._config;
+  }
+
+  private findConfigFile(customPath?: string): string | null {
+    if (customPath) {
+      const resolvedPath = resolve(customPath);
+
+      // Security: Prevent path traversal attacks by ensuring the path is within reasonable bounds
+      const normalizedPath = resolvedPath.replace(/\\/g, '/');
+      if (normalizedPath.includes('/../') || normalizedPath.includes('/..') || normalizedPath.startsWith('../')) {
+        throw new Error(`Invalid configuration file path: ${customPath}`);
+      }
+
+      // Ensure it's a config file extension
+      if (!/\.(js|mjs|cjs|json|ts)$/.test(normalizedPath)) {
+        throw new Error(`Invalid configuration file type: ${customPath}. Must be .js, .mjs, .cjs, .json, or .ts`);
+      }
+
+      if (existsSync(resolvedPath)) {
+        return resolvedPath;
+      }
+      throw new Error(`Configuration file not found: ${customPath}`);
+    }
+
+    for (const configPath of this.defaultConfigPaths) {
+      const fullPath = resolve(configPath);
+      if (existsSync(fullPath)) {
+        return fullPath;
+      }
+    }
+
+    return null;
+  }
+
+  private async loadConfigFile(configPath: string): Promise<unknown> {
+    // Dynamic import for config files
+    const module = await import(configPath) as { default?: unknown };
+
+    // Handle ES modules default export
+    return module.default ?? module;
+  }
+
+  private validateAndNormalizeConfig(config: unknown): Config {
+    try {
+      return ConfigSchema.parse(config);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const issues = error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ');
+        throw new Error(`Invalid configuration: ${issues}`);
+      }
+      throw error;
+    }
+  }
+
+  private getDefaultConfig(): Config {
+    return ConfigSchema.parse({});
+  }
+
+  getConfig(): Config {
+    if (!this._config) {
+      throw new Error('Configuration not loaded. Call loadConfig() first.');
+    }
+    return this._config;
+  }
+
+  createDefaultConfigFile(): string {
+    return `// zodkit configuration file
+module.exports = {
+  // Schema detection
+  schemas: {
+    patterns: ['./lib/schemas/**/*.ts', './src/types/**/*.ts'],
+    exclude: ['**/*.test.ts', '**/*.spec.ts']
+  },
+
+  // Validation targets
+  targets: {
+    mdx: {
+      patterns: ['./content/**/*.mdx'],
+      frontmatterSchemas: 'auto' // or specific mapping
+    },
+    components: {
+      patterns: ['./components/**/*.tsx', './src/**/*.tsx'],
+      propSchemas: 'auto'
+    },
+    api: {
+      patterns: ['./pages/api/**/*.ts', './src/api/**/*.ts'],
+      requestSchemas: 'auto',
+      responseSchemas: 'auto'
+    }
+  },
+
+  // Rules configuration
+  rules: {
+    'require-validation': 'error',
+    'no-any-fallback': 'warn',
+    'prefer-strict-schemas': 'warn'
+  },
+
+  // Output options
+  output: {
+    format: 'pretty', // 'pretty' | 'json' | 'junit'
+    verbose: false,
+    showSuccessful: false
+  }
+};
+`;
+  }
+}
