@@ -4,7 +4,6 @@
  */
 
 import * as pc from 'picocolors';
-import { z } from 'zod';
 
 /**
  * Types of schema changes

@@ -6,7 +6,6 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 // @ts-ignore: Reserved for future hash-based refactoring
-import { createHash } from 'crypto';
 
 export interface RefactorOptions {
   dryRun?: boolean;
@@ -509,7 +508,6 @@ export class RefactorAssistant {
     while ((match = importRegex.exec(content)) !== null) {
       const imports = match[1];
       // @ts-ignore: Reserved for future module path analysis
-      const modulePath = match[2];
 
       if (imports?.includes(operation.target)) {
         if (operation.type === 'rename') {

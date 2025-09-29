@@ -83,19 +83,19 @@ const UnifiedConfigSchema = z.object({
   parallel: z.object({
     workers: z.number().default(4),
     timeout: z.number().default(30000)
-  }).default({}),
+  }).default(() => ({ workers: 4, timeout: 30000 })),
 
   mcp: z.object({
     port: z.number().default(3456),
     auth: z.string().optional(),
     exposeFixes: z.boolean().default(false)
-  }).default({}),
+  }).default(() => ({ port: 3456, exposeFixes: false })),
 
   monitoring: z.object({
     enabled: z.boolean().default(false),
     interval: z.number().default(60000),
     metrics: z.array(z.string()).default(['memory', 'cpu', 'schemas'])
-  }).default({})
+  }).default(() => ({ enabled: false, interval: 60000, metrics: ['memory', 'cpu', 'schemas'] }))
 });
 
 export type UnifiedConfig = z.infer<typeof UnifiedConfigSchema>;
@@ -230,9 +230,15 @@ export class UnifiedConfigManager {
         rules: {
           'require-validation': 'error' as const,
           'no-any-types': 'warn' as const,
+          'no-empty-schema': 'error' as const,
           'validate-external-data': 'error' as const,
+          'prefer-strict-schemas': 'warn' as const,
+          'use-descriptive-names': 'warn' as const,
+          'no-unused-schemas': 'warn' as const,
+          'prefer-specific-types': 'warn' as const,
           'no-eval-in-schemas': 'error' as const,
-          'no-prototype-pollution': 'error' as const
+          'no-prototype-pollution': 'error' as const,
+          'require-return-type': 'warn' as const
         },
         cache: { enabled: false },
         monitoring: { enabled: false }

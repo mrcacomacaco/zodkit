@@ -19,15 +19,26 @@ const baseConfig = {
     'zlib': 'commonjs zlib',
     'child_process': 'commonjs child_process',
     'os': 'commonjs os',
+    'url': 'commonjs url',
+    'http': 'commonjs http',
+    'https': 'commonjs https',
+    'buffer': 'commonjs buffer',
     // Keep large dependencies external to reduce bundle size
     'zod': 'commonjs zod',
     'commander': 'commonjs commander',
     'ts-morph': 'commonjs ts-morph',
+    '@faker-js/faker': 'commonjs @faker-js/faker',
     'fast-glob': 'commonjs fast-glob',
-    'chokidar': 'commonjs chokidar'
+    'chokidar': 'commonjs chokidar',
+    'ws': 'commonjs ws',
+    'ink': 'commonjs ink',
+    'react': 'commonjs react',
+    'ink-spinner': 'commonjs ink-spinner',
+    'ink-select-input': 'commonjs ink-select-input',
+    'ink-text-input': 'commonjs ink-text-input'
   },
   resolve: {
-    extensions: ['.ts', '.js', '.json'],
+    extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
     alias: {
       '@': path.resolve(__dirname, 'src'),
       '@core': path.resolve(__dirname, 'src/core'),
@@ -38,7 +49,7 @@ const baseConfig = {
   module: {
     rules: [
       {
-        test: /\.ts$/,
+        test: /\.(ts|tsx)$/,
         use: [
           {
             loader: 'ts-loader',
@@ -85,11 +96,11 @@ const baseConfig = {
 };
 
 module.exports = [
-  // CLI Entry Point
+  // CLI Entry Point - Minimal for debugging
   {
     ...baseConfig,
     name: 'cli',
-    entry: './src/cli/index.ts',
+    entry: './src/cli/functional.ts',
     output: {
       path: path.resolve(__dirname, 'dist'),
       filename: 'cli/index.js',

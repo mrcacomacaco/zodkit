@@ -75,7 +75,7 @@ export async function createPluginInteractive(name: string, options: any): Promi
  */
 function prompt(question: string, defaultValue?: string): Promise<string> {
   return new Promise((resolve) => {
-    const readline = require('readline');
+    import readline from "readline";
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
@@ -104,7 +104,7 @@ function promptChoice(question: string, choices: string[], defaultChoice: string
       console.log(`  ${marker} ${choice}${isDefault ? pc.gray(' (default)') : ''}`);
     });
 
-    const readline = require('readline');
+    import readline from "readline";
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
@@ -129,7 +129,7 @@ function promptChoice(question: string, choices: string[], defaultChoice: string
 function promptConfirm(question: string, defaultValue: boolean = true): Promise<boolean> {
   return new Promise((resolve) => {
     const defaultText = defaultValue ? 'Y/n' : 'y/N';
-    const readline = require('readline');
+    import readline from "readline";
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout

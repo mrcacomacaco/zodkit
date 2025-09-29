@@ -27,7 +27,7 @@ module.exports = {
       statements: 85
     }
   },
-  setupFilesAfterEnv: ['<rootDir>/test/setup.ts', '<rootDir>/tests/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   transformIgnorePatterns: [
     'node_modules/(?!(picocolors|commander)/)'
   ],

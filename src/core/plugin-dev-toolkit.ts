@@ -48,7 +48,7 @@ export interface PluginTestResult {
 // === PLUGIN DEVELOPMENT TOOLKIT ===
 
 export class PluginDevToolkit {
-  constructor(private workingDirectory: string = process.cwd()) {}
+  constructor(private readonly workingDirectory: string = process.cwd()) {}
 
   /**
    * Scaffold a new plugin project
@@ -232,7 +232,6 @@ export class PluginDevToolkit {
       throw new Error('No package.json found');
     }
 
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
     // Check if TypeScript
     const tsConfigPath = path.join(pluginPath, 'tsconfig.json');
@@ -242,7 +241,7 @@ export class PluginDevToolkit {
       console.log(pc.gray('  📝 Compiling TypeScript...'));
 
       try {
-        const { execSync } = require('child_process');
+        import {  execSync  } from "child_process";
         execSync('npx tsc', { cwd: pluginPath, stdio: 'inherit' });
         console.log(pc.green('  ✅ TypeScript compilation successful'));
       } catch (error) {
@@ -273,7 +272,7 @@ export class PluginDevToolkit {
 
     // Check if user is logged in to npm
     try {
-      const { execSync } = require('child_process');
+      import {  execSync  } from "child_process";
       execSync('npm whoami', { cwd: pluginPath, stdio: 'pipe' });
     } catch (error) {
       throw new Error('Not logged in to npm. Run "npm login" first.');
@@ -288,7 +287,7 @@ export class PluginDevToolkit {
     if (options.dry) publishArgs.push('--dry-run');
 
     try {
-      const { execSync } = require('child_process');
+      import {  execSync  } from "child_process";
       const command = `npm ${publishArgs.join(' ')}`;
 
       console.log(pc.gray(`  Running: ${command}`));
@@ -536,7 +535,7 @@ MIT © ${options.author}
   private generateTestContent(options: PluginScaffoldOptions): string {
     const pluginName = options.name.startsWith('zodkit-plugin-') ? options.name : `zodkit-plugin-${options.name}`;
 
-    return `${options.typescript ? 'import plugin from "./index";' : 'const plugin = require("./index");'}
+    return `${options.typescript ? 'import plugin from "./index";' : 'import plugin from "./index";'}
 
 describe('${pluginName}', () => {
   test('plugin has valid config', () => {
@@ -575,7 +574,7 @@ describe('${pluginName}', () => {
 
   private async initializeGit(pluginDir: string): Promise<void> {
     try {
-      const { execSync } = require('child_process');
+      import {  execSync  } from "child_process";
       execSync('git init', { cwd: pluginDir, stdio: 'pipe' });
       console.log(pc.gray('  📚 Git repository initialized'));
     } catch (error) {
@@ -585,7 +584,7 @@ describe('${pluginName}', () => {
 
   private async installDependencies(pluginDir: string): Promise<void> {
     try {
-      const { execSync } = require('child_process');
+      import {  execSync  } from "child_process";
       console.log(pc.gray('  📦 Installing dependencies...'));
       execSync('npm install', { cwd: pluginDir, stdio: 'inherit' });
       console.log(pc.green('  ✅ Dependencies installed'));
@@ -703,7 +702,7 @@ describe('${pluginName}', () => {
         result.errors.push('package.json must have a version field');
       }
 
-      if (!packageJson.keywords || !packageJson.keywords.includes('zodkit')) {
+      if (!packageJson.keywords?.includes('zodkit')) {
         result.suggestions.push('Consider adding "zodkit" to package.json keywords for better discoverability');
       }
 

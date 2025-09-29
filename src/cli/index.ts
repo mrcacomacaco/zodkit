@@ -36,9 +36,10 @@ const mockCommand = lazyImport(() => import('./commands/mock'));
 const docsCommand = lazyImport(() => import('./commands/docs'));
 const testCommand = lazyImport(() => import('./commands/test'));
 const migrateCommand = lazyImport(() => import('./commands/migrate'));
-const refactorCommand = lazyImport(() => import('./commands/refactor'));
-const transformCommand = lazyImport(() => import('./commands/transform'));
-const composeCommand = lazyImport(() => import('./commands/compose'));
+// Temporarily disabled - commands not yet implemented
+// const refactorCommand = lazyImport(() => import('./commands/refactor'));
+// const transformCommand = lazyImport(() => import('./commands/transform'));
+// const composeCommand = lazyImport(() => import('./commands/compose'));
 const collaborateCommand = lazyImport(() => import('./commands/collaborate'));
 const mcpCommand = lazyImport(() => import('./commands/mcp'));
 const initCommand = lazyImport(() => import('./commands/init'));
@@ -130,8 +131,9 @@ program.addCommand(CommandConfigs.contract().action(contractCommand).build());
 
 // Transformation Commands
 program.addCommand(CommandConfigs.migrate().action(migrateCommand).build());
-program.addCommand(CommandConfigs.refactor().action(refactorCommand).build());
-program.addCommand(CommandConfigs.compose().action(composeCommand).build());
+// Temporarily disabled - commands not yet implemented
+// program.addCommand(CommandConfigs.refactor().action(refactorCommand).build());
+// program.addCommand(CommandConfigs.compose().action(composeCommand).build());
 
 // Collaboration Commands
 program.addCommand(CommandConfigs.collaborate().action(collaborateCommand).build());

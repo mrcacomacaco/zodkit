@@ -15,8 +15,8 @@
 import { z } from 'zod';
 import * as ts from 'typescript';
 import * as pc from 'picocolors';
-import { faker } from '@faker-js/faker';
-import { readFileSync, writeFileSync } from 'fs';
+// Dynamic import for faker to reduce bundle size
+import { generateMockString, generateMockNumber, generateMockBoolean, generateMockDate } from './faker-utils';
 
 // === UNIFIED GENERATION TYPES ===
 
@@ -62,8 +62,8 @@ export interface PatternDetection {
 // === UNIFIED SCHEMA GENERATOR ===
 
 export class SchemaGenerator {
-  private templates: Map<string, string> = new Map();
-  private patterns: Map<string, RegExp> = new Map();
+  private readonly templates: Map<string, string> = new Map();
+  private readonly patterns: Map<string, RegExp> = new Map();
 
   constructor() {
     this.initializePatterns();
@@ -304,19 +304,19 @@ const ApiResponseSchema = z.object({
     return `const Schema = ${inferType(obj)};`;
   }
 
-  private generateMockFromSchema(schema: z.ZodTypeAny): any {
+  private async generateMockFromSchema(schema: z.ZodTypeAny): Promise<any> {
     // Generate mock data based on schema type
     if (schema instanceof z.ZodString) {
-      return faker.lorem.word();
+      return await generateMockString();
     }
     if (schema instanceof z.ZodNumber) {
-      return faker.number.int({ min: 0, max: 100 });
+      return await generateMockNumber();
     }
     if (schema instanceof z.ZodBoolean) {
-      return faker.datatype.boolean();
+      return await generateMockBoolean();
     }
     if (schema instanceof z.ZodDate) {
-      return faker.date.recent();
+      return await generateMockDate();
     }
     if (schema instanceof z.ZodArray) {
       return Array.from({ length: 3 }, () => this.generateMockFromSchema(schema.element));

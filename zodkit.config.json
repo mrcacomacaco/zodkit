@@ -1,0 +1,11 @@
+{
+  "name": "test-project",
+  "version": "1.0.0",
+  "zodkit": {
+    "schemaDir": "./schemas",
+    "outputDir": "./generated",
+    "rules": [
+      "recommended"
+    ]
+  }
+}

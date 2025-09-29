@@ -395,9 +395,9 @@ export interface TrendPrediction {
 // === UNIFIED PERFORMANCE PROFILER ENGINE ===
 
 export class PerformanceProfilerEngine extends EventEmitter {
-  private profiles: Map<string, PerformanceProfile> = new Map();
-  private settings: ProfilerSettings;
-  private observer?: PerformanceObserver;
+  private readonly profiles: Map<string, PerformanceProfile> = new Map();
+  private readonly settings: ProfilerSettings;
+  private readonly observer?: PerformanceObserver;
 
   constructor(settings?: Partial<ProfilerSettings>) {
     super();

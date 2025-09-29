@@ -5,7 +5,8 @@
 
 import { z } from 'zod';
 import * as pc from 'picocolors';
-import { Project, Node, SyntaxKind, SourceFile, CallExpression } from 'ts-morph';
+// Dynamic import for ts-morph to reduce bundle size
+// import { Project, Node, SyntaxKind, SourceFile, CallExpression } from 'ts-morph';
 
 /**
  * Schema optimization recommendation
@@ -68,9 +69,9 @@ export interface OptimizationPattern {
  * AI-powered schema optimization engine
  */
 export class AIOptimizationEngine {
-  private project: Project;
+  private readonly project: Project;
   private patterns: OptimizationPattern[] = [];
-  private knowledgeBase: Map<string, any> = new Map();
+  private readonly knowledgeBase: Map<string, any> = new Map();
 
   constructor() {
     this.project = new Project({

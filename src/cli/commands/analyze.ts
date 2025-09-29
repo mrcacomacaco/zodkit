@@ -223,7 +223,6 @@ function confirmFix(fix: any, isJsonMode: boolean): boolean {
 
 function displayResults(results: any[], mode: AnalyzeMode): void {
   const utils = new Utils();
-  const _logger = utils.logger;
 
   console.log('\n' + pc.bold('Analysis Results'));
   console.log(pc.gray('─'.repeat(60)));

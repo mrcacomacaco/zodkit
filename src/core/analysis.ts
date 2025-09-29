@@ -68,8 +68,8 @@ export interface Rule {
 // === UNIFIED ANALYZER ===
 
 export class Analyzer {
-  private rules: Map<string, Rule> = new Map();
-  private metrics: Map<string, number> = new Map();
+  private readonly rules: Map<string, Rule> = new Map();
+  private readonly metrics: Map<string, number> = new Map();
 
   constructor() {
     this.initializeRules();
@@ -545,19 +545,19 @@ export class Analyzer {
       issueCounts.set(issue.rule, (issueCounts.get(issue.rule) || 0) + 1);
     });
 
-    if (issueCounts.get('no-any') ?? 0 > 0 || issueCounts.get('any-type') ?? 0 > 0) {
+    if ((issueCounts.get('no-any') ?? 0) > 0 || (issueCounts.get('any-type') ?? 0) > 0) {
       suggestions.push('Replace z.any() with specific types like z.string(), z.number(), etc.');
     }
 
-    if (issueCounts.get('min-value') ?? 0 > 0) {
+    if ((issueCounts.get('min-value') ?? 0) > 0) {
       suggestions.push('Add minimum constraints: z.number().min(0)');
     }
 
-    if (issueCounts.get('deep-nesting') ?? 0 > 0) {
+    if ((issueCounts.get('deep-nesting') ?? 0) > 0) {
       suggestions.push('Refactor deeply nested schemas into separate definitions');
     }
 
-    if (issueCounts.get('require-description') ?? 0 > 0) {
+    if ((issueCounts.get('require-description') ?? 0) > 0) {
       suggestions.push('Add descriptions to schemas using .describe()');
     }
 

@@ -9,7 +9,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { EventEmitter } from 'events';
-import { z } from 'zod';
 import type { SchemaInfo } from './infrastructure';
 import type { PerformanceMonitor } from '../utils/performance-monitor';
 import type { Logger } from '../utils/logger';
@@ -73,18 +72,18 @@ export interface SchemaChunk {
 // === PROGRESSIVE LOADER ===
 
 export class ProgressiveLoader extends EventEmitter {
-  private loadingStrategies: Map<string, LoadingStrategy> = new Map();
-  private activeLoading: Map<string, Promise<SchemaInfo[]>> = new Map();
+  private readonly loadingStrategies: Map<string, LoadingStrategy> = new Map();
+  private readonly activeLoading: Map<string, Promise<SchemaInfo[]>> = new Map();
   private loadingQueue: SchemaChunk[] = [];
-  private loadedChunks: Set<string> = new Set();
-  private memoryManager: MemoryManager;
-  private dependencyGraph: DependencyGraph;
-  private lazyCache: Map<string, () => Promise<SchemaInfo>> = new Map();
+  private readonly loadedChunks: Set<string> = new Set();
+  private readonly memoryManager: MemoryManager;
+  private readonly dependencyGraph: DependencyGraph;
+  private readonly lazyCache: Map<string, () => Promise<SchemaInfo>> = new Map();
 
   constructor(
-    private options: ProgressiveLoadingOptions = {},
-    private monitor: PerformanceMonitor,
-    private logger: Logger
+    private readonly options: ProgressiveLoadingOptions = {},
+    private readonly monitor: PerformanceMonitor,
+    private readonly logger: Logger
   ) {
     super();
 
@@ -584,7 +583,7 @@ export class ProgressiveLoader extends EventEmitter {
 // === SUPPORTING CLASSES ===
 
 class MemoryManager {
-  constructor(private thresholdMB: number) {}
+  constructor(private readonly thresholdMB: number) {}
 
   getCurrentUsage(): number {
     const usage = process.memoryUsage();
@@ -610,8 +609,8 @@ class MemoryManager {
 }
 
 class DependencyGraph {
-  private nodes: Set<string> = new Set();
-  private edges: Map<string, Set<string>> = new Map();
+  private readonly nodes: Set<string> = new Set();
+  private readonly edges: Map<string, Set<string>> = new Map();
 
   addNode(id: string): void {
     this.nodes.add(id);
@@ -691,7 +690,7 @@ class DependencyGraph {
 
 class Semaphore {
   private permits: number;
-  private waiting: (() => void)[] = [];
+  private readonly waiting: (() => void)[] = [];
 
   constructor(permits: number) {
     this.permits = permits;

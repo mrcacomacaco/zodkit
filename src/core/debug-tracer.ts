@@ -119,13 +119,13 @@ export interface DebugMetrics {
 // === DEBUG TRACER ===
 
 export class DebugTracer extends EventEmitter {
-  private config: DebugConfig;
+  private readonly config: DebugConfig;
   private currentSession: DebugSession | null = null;
   private traceBuffer: TraceEntry[] = [];
-  private performanceProfiles: Map<string, PerformanceProfile> = new Map();
-  private activeTimers: Map<string, number> = new Map();
-  private breakpoints: Map<string, BreakpointInfo> = new Map();
-  private watchedVariables: Map<string, any> = new Map();
+  private readonly performanceProfiles: Map<string, PerformanceProfile> = new Map();
+  private readonly activeTimers: Map<string, number> = new Map();
+  private readonly breakpoints: Map<string, BreakpointInfo> = new Map();
+  private readonly watchedVariables: Map<string, any> = new Map();
   private outputStream?: fs.WriteStream;
   private interactiveMode = false;
 

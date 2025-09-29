@@ -34,7 +34,7 @@ export interface ProjectContext {
  * Smart command suggestion engine
  */
 export class CommandSuggestionEngine {
-  private context: ProjectContext;
+  private readonly context: ProjectContext;
 
   constructor() {
     this.context = this.analyzeProjectContext();

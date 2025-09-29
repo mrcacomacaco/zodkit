@@ -118,20 +118,20 @@ export interface TestRunConfig {
 // === TESTING INFRASTRUCTURE ===
 
 export class TestingInfrastructure extends EventEmitter {
-  private testSuites: Map<string, TestSuite> = new Map();
+  private readonly testSuites: Map<string, TestSuite> = new Map();
   private testResults: TestResult[] = [];
-  private performanceBaselines: Map<string, PerformanceMetrics> = new Map();
-  private contractDatabase: Map<string, any> = new Map();
-  private mutationStrategies: Map<string, MutationStrategy> = new Map();
-  private testDiscovery: TestDiscovery;
-  private testGenerator: TestGenerator;
-  private testRunner: TestRunner;
-  private coverageAnalyzer: CoverageAnalyzer;
-  private performanceBenchmark: PerformanceBenchmark;
+  private readonly performanceBaselines: Map<string, PerformanceMetrics> = new Map();
+  private readonly contractDatabase: Map<string, any> = new Map();
+  private readonly mutationStrategies: Map<string, MutationStrategy> = new Map();
+  private readonly testDiscovery: TestDiscovery;
+  private readonly testGenerator: TestGenerator;
+  private readonly testRunner: TestRunner;
+  private readonly coverageAnalyzer: CoverageAnalyzer;
+  private readonly performanceBenchmark: PerformanceBenchmark;
 
   constructor(
-    private config: TestRunConfig = {},
-    private monitor: PerformanceMonitor
+    private readonly config: TestRunConfig = {},
+    private readonly monitor: PerformanceMonitor
   ) {
     super();
 
@@ -522,8 +522,8 @@ class TestGenerator {
 
 class TestRunner {
   constructor(
-    private config: TestRunConfig,
-    private monitor: PerformanceMonitor
+    private readonly config: TestRunConfig,
+    private readonly monitor: PerformanceMonitor
   ) {}
 
   async runSuite(suite: TestSuite, config: TestRunConfig): Promise<TestResult[]> {
@@ -652,7 +652,7 @@ class CoverageAnalyzer {
 }
 
 class PerformanceBenchmark {
-  constructor(private monitor: PerformanceMonitor) {}
+  constructor(private readonly monitor: PerformanceMonitor) {}
 
   async runBenchmarks(schemas: SchemaInfo[], config: PerformanceTestConfig): Promise<PerformanceMetrics[]> {
     const results: PerformanceMetrics[] = [];

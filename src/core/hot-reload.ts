@@ -8,7 +8,6 @@
 
 import { EventEmitter } from 'events';
 import { watch, FSWatcher, WatchOptions } from 'chokidar';
-import { dirname, relative, resolve, extname } from 'path';
 import { readFile, stat } from 'fs/promises';
 import { PerformanceMonitor } from './performance-monitor';
 import { Logger } from '../utils/logger';
@@ -60,14 +59,14 @@ export interface HotReloadEvent {
 }
 
 export class HotReloadManager extends EventEmitter {
-  private config: HotReloadConfig;
+  private readonly config: HotReloadConfig;
   private watcher: FSWatcher | null = null;
-  private dependencyGraph: Map<string, DependencyNode> = new Map();
-  private reloadQueue: Map<string, number> = new Map();
+  private readonly dependencyGraph: Map<string, DependencyNode> = new Map();
+  private readonly reloadQueue: Map<string, number> = new Map();
   private isReloading = false;
-  private reloadDebounceTimers: Map<string, NodeJS.Timeout> = new Map();
-  private performanceMonitor: PerformanceMonitor;
-  private logger: Logger;
+  private readonly reloadDebounceTimers: Map<string, NodeJS.Timeout> = new Map();
+  private readonly performanceMonitor: PerformanceMonitor;
+  private readonly logger: Logger;
   private infrastructure?: Infrastructure;
 
   constructor(
@@ -377,7 +376,6 @@ export class HotReloadManager extends EventEmitter {
 
   private async handleFileUpdate(filePath: string): Promise<void> {
     // Re-analyze the file
-    const node = await this.analyzeFile(filePath);
 
     // Determine what needs to be invalidated
     const toInvalidate = this.calculateInvalidationSet(filePath);

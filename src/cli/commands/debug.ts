@@ -63,7 +63,7 @@ export async function debugCommand(
       enabled: true,
       level: options.level || 'debug',
       output: options.output || 'console',
-      outputFile: options.outputFile,
+      outputFile: options.outputFile || 'debug.log',
       tracing: {
         enabled: true,
         includeStackTrace: options.level === 'trace',

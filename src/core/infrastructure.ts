@@ -19,10 +19,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as pc from 'picocolors';
 import { glob } from 'glob';
-import { Worker } from 'worker_threads';
 import { EventEmitter } from 'events';
-import { createServer } from 'http';
-import { WebSocketServer } from 'ws';
+import { createServer, Server } from 'http';
+import { WebSocketServer, WebSocket } from 'ws';
 import { MemoryOptimizer, StreamingProcessor } from './memory-optimizer';
 import { ProgressiveLoader, ProgressiveLoadingOptions } from './progressive-loader';
 
@@ -88,15 +87,15 @@ export interface ValidationResult {
 // === SCHEMA DISCOVERY ===
 
 export class SchemaDiscovery {
-  private config: InfrastructureConfig;
-  private cache: SchemaCache;
-  private patterns: string[];
-  private progressiveLoader?: ProgressiveLoader;
+  private readonly config: InfrastructureConfig;
+  private readonly cache: SchemaCache;
+  private readonly patterns: string[];
+  private readonly progressiveLoader?: ProgressiveLoader;
 
-  constructor(config: InfrastructureConfig = {}, cache?: SchemaCache, monitor?: any, logger?: any) {
+  constructor(config: InfrastructureConfig = {}, cache?: SchemaCache, monitor?: unknown, logger?: unknown) {
     this.config = config;
-    this.cache = cache || new SchemaCache(config);
-    this.patterns = config.discovery?.patterns || this.getSmartDefaultPatterns();
+    this.cache = cache ?? new SchemaCache(config);
+    this.patterns = config.discovery?.patterns ?? this.getSmartDefaultPatterns();
 
     // Initialize progressive loader if configured
     if (config.progressive && monitor && logger) {
@@ -133,12 +132,12 @@ export class SchemaDiscovery {
   }
 
   async findSchemas(options?: { useCache?: boolean, basePath?: string, progressive?: boolean }): Promise<SchemaInfo[]> {
-    const basePath = options?.basePath || process.cwd();
+    const basePath = options?.basePath ?? process.cwd();
     const cacheKey = `schemas_${basePath}_${JSON.stringify(this.patterns)}`;
 
     // Try cache first if enabled
     if (options?.useCache !== false) {
-      const cached = this.cache.get(cacheKey);
+      const cached = this.cache.get(cacheKey) as SchemaInfo[] | undefined;
       if (cached) {
         return cached;
       }
@@ -280,7 +279,6 @@ export class SchemaDiscovery {
 
   private parseSchemas(content: string, filePath: string): SchemaInfo[] {
     const schemas: SchemaInfo[] = [];
-    const lines = content.split('\n');
 
     // Simple regex-based parsing (in production, use TypeScript AST)
     const schemaPattern = /(?:export\s+)?const\s+(\w+)(?:Schema)?\s*=\s*z\./g;
@@ -333,8 +331,8 @@ export class SchemaDiscovery {
 
 // === ADVANCED SCHEMA CACHE ===
 
-export interface CacheEntry {
-  data: any;
+export interface CacheEntry<T = unknown> {
+  data: T;
   timestamp: number;
   version: string;
   dependencies: string[];
@@ -353,8 +351,8 @@ export interface CacheStats {
 }
 
 export class SchemaCache {
-  private cache: Map<string, CacheEntry> = new Map();
-  private fileWatchers: Map<string, fs.FSWatcher> = new Map();
+  private readonly cache: Map<string, CacheEntry<unknown>> = new Map();
+  private readonly fileWatchers: Map<string, fs.FSWatcher> = new Map();
   private stats = {
     hits: 0,
     misses: 0,
@@ -362,11 +360,11 @@ export class SchemaCache {
     accessCount: 0
   };
 
-  private ttl: number;
-  private directory: string;
-  private maxSize: number;
-  private enabled: boolean;
-  private compressionEnabled: boolean;
+  private readonly ttl: number;
+  private readonly directory: string;
+  private readonly maxSize: number;
+  private readonly enabled: boolean;
+  private readonly compressionEnabled: boolean;
 
   constructor(config: InfrastructureConfig = {}) {
     this.ttl = config.cache?.ttl || 3600000; // 1 hour default
@@ -393,16 +391,16 @@ export class SchemaCache {
     setInterval(() => this.cleanup(), 300000); // Every 5 minutes
   }
 
-  private generateChecksum(data: any): string {
-    const crypto = require('crypto');
+  private generateChecksum(data: unknown): string {
+    import crypto from "crypto";
     return crypto.createHash('md5').update(JSON.stringify(data)).digest('hex');
   }
 
-  private calculateSize(data: any): number {
+  private calculateSize(data: unknown): number {
     return Buffer.byteLength(JSON.stringify(data), 'utf8');
   }
 
-  get(key: string): any {
+  get<T = unknown>(key: string): T | null {
     const start = Date.now();
 
     if (!this.enabled) {
@@ -435,7 +433,7 @@ export class SchemaCache {
     return cached.data;
   }
 
-  set(key: string, data: any, dependencies: string[] = []): void {
+  set<T = unknown>(key: string, data: T, dependencies: string[] = []): void {
     if (!this.enabled) return;
 
     const size = this.calculateSize(data);
@@ -723,7 +721,7 @@ export class SchemaCache {
 // === SCHEMA MAPPER ===
 
 export class SchemaMapper {
-  private relationships: Map<string, Set<string>> = new Map();
+  private readonly relationships: Map<string, Set<string>> = new Map();
 
   buildRelationshipMap(
     schemas: SchemaInfo[],
@@ -827,10 +825,10 @@ export class Validator {
 // === MCP SERVER ===
 
 export class MCPServer {
-  private server: any;
+  private server: Server | null = null;
   private wss: WebSocketServer | null = null;
-  private port: number;
-  private capabilities: string[] = ['schema-analysis', 'validation', 'generation'];
+  private readonly port: number;
+  private readonly capabilities: string[] = ['schema-analysis', 'validation', 'generation'];
 
   constructor(config: InfrastructureConfig = {}) {
     this.port = config.mcp?.port || 3456;
@@ -860,7 +858,7 @@ export class MCPServer {
     });
   }
 
-  private handleMessage(ws: any, message: string): void {
+  private handleMessage(ws: WebSocket, message: string): void {
     try {
       const request = JSON.parse(message);
       const response = this.processRequest(request);
@@ -870,7 +868,7 @@ export class MCPServer {
     }
   }
 
-  private processRequest(request: any): any {
+  private processRequest(request: Record<string, unknown>): Record<string, unknown> {
     switch (request.type) {
       case 'analyze':
         return { type: 'analysis', result: 'Schema analysis result' };
@@ -915,8 +913,8 @@ export interface ProcessingOptions {
 }
 
 export class ParallelProcessor extends EventEmitter {
-  private activeJobs = new Map<string, Promise<any>>();
-  private stats = {
+  private readonly activeJobs = new Map<string, Promise<unknown>>();
+  private readonly stats = {
     processed: 0,
     failed: 0,
     totalDuration: 0,
@@ -927,7 +925,7 @@ export class ParallelProcessor extends EventEmitter {
   private timeout: number;
   private enabled: boolean;
 
-  constructor(private config: InfrastructureConfig = {}) {
+  constructor(private readonly config: InfrastructureConfig = {}) {
     super();
     this.maxConcurrency = config.parallel?.workers || 4;
     this.timeout = config.parallel?.timeout || 30000;
@@ -1091,7 +1089,7 @@ export class ParallelProcessor extends EventEmitter {
   /**
    * Process schemas in parallel with smart batching
    */
-  async processSchemas(schemas: any[], processor: (schema: any) => Promise<any>): Promise<any[]> {
+  async processSchemas<T = unknown, R = unknown>(schemas: T[], processor: (schema: T) => Promise<R>): Promise<R[]> {
     const options: ProcessingOptions = {
       maxConcurrency: Math.min(this.maxConcurrency, schemas.length),
       batchSize: Math.max(1, Math.floor(schemas.length / 4)), // Dynamic batch sizing
@@ -1101,7 +1099,7 @@ export class ParallelProcessor extends EventEmitter {
 
     const results = await this.process(schemas, processor, options);
 
-    return results.map(result => result.success ? result.result : null).filter(Boolean);
+    return results.map(result => result.success ? result.result : null).filter((item): item is R => item !== null);
   }
 
   /**
@@ -1200,10 +1198,10 @@ export class ParallelProcessor extends EventEmitter {
 // === HEALTH MONITOR ===
 
 export class HealthMonitor {
-  private metrics: Map<string, any> = new Map();
+  private readonly metrics: Map<string, any> = new Map();
   private interval: NodeJS.Timeout | null = null;
 
-  constructor(private config: InfrastructureConfig = {}) {
+  constructor(private readonly config: InfrastructureConfig = {}) {
     if (config.monitoring?.enabled) {
       this.startMonitoring();
     }

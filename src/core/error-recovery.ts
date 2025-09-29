@@ -59,10 +59,10 @@ export class CircuitBreaker extends EventEmitter {
   private failures: number = 0;
   private lastFailure: number = 0;
   private successes: number = 0;
-  private config: CircuitBreakerConfig;
+  private readonly config: CircuitBreakerConfig;
 
   constructor(
-    private operation: string,
+    private readonly operation: string,
     config: Partial<CircuitBreakerConfig> = {}
   ) {
     super();
@@ -147,9 +147,9 @@ export class CircuitBreaker extends EventEmitter {
 // === ERROR RECOVERY MANAGER ===
 
 export class ErrorRecoveryManager extends EventEmitter {
-  private errorReports = new Map<string, ErrorReport>();
-  private circuitBreakers = new Map<string, CircuitBreaker>();
-  private recoveryStrategies = new Map<string, RecoveryAction[]>();
+  private readonly errorReports = new Map<string, ErrorReport>();
+  private readonly circuitBreakers = new Map<string, CircuitBreaker>();
+  private readonly recoveryStrategies = new Map<string, RecoveryAction[]>();
 
   constructor() {
     super();
@@ -416,7 +416,7 @@ export class ErrorRecoveryManager extends EventEmitter {
    * Generate unique error ID
    */
   private generateErrorId(error: Error, context: ErrorContext): string {
-    const hash = require('crypto')
+    import hash from "crypto"
       .createHash('md5')
       .update(`${error.message}_${context.operation}_${context.file || ''}`)
       .digest('hex')
@@ -531,8 +531,8 @@ export class ErrorRecoveryManager extends EventEmitter {
 // === GRACEFUL DEGRADATION ===
 
 export class GracefulDegradation {
-  private features = new Map<string, boolean>();
-  private degradationHistory: Array<{ feature: string; timestamp: number; reason: string }> = [];
+  private readonly features = new Map<string, boolean>();
+  private readonly degradationHistory: Array<{ feature: string; timestamp: number; reason: string }> = [];
 
   constructor() {
     // Initialize all features as enabled

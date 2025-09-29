@@ -168,4 +168,9 @@ export class ConfigManager {
 
 // Export default config manager instance
 export const configManager = ConfigManager.getInstance();
-export { ConfigSchema };
+export { ConfigSchema, ConfigManager };
+
+// Add loadConfig function for backward compatibility
+export const loadConfig = async (configPath?: string) => {
+  return configManager.loadConfig(configPath);
+};

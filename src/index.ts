@@ -21,8 +21,7 @@ export type {
 
 // === ANALYSIS SYSTEM ===
 export { Analyzer } from './core/analysis';
-export { ComplexityAnalyzer } from './core/complexity-analyzer';
-export { RuleEngine } from './core/rule-engine';
+// Note: ComplexityAnalyzer and RuleEngine integrated into Analyzer class
 export type {
   AnalysisResult,
   AnalysisOptions,
@@ -59,9 +58,9 @@ export type {
 } from './core/memory-optimizer';
 
 // === SCHEMA OPERATIONS (lazy-loaded for tree-shaking) ===
-export const createSchemaGenerator = () => import('./core/schema-generation').then(m => m.SchemaGenerator || m.default);
-export const createSchemaTester = () => import('./core/schema-testing').then(m => m.SchemaTester || m.default);
-export const createSchemaTransformer = () => import('./core/schema-transformation').then(m => m.SchemaTransformer || m.default);
+export const createSchemaGenerator = () => await import("./core/schema-generation").then(m => m.SchemaGenerator || m.default);
+export const createSchemaTester = () => await import("./core/schema-testing").then(m => m.SchemaTester || m.default);
+export const createSchemaTransformer = () => await import("./core/schema-transformation").then(m => m.SchemaTransformer || m.default);
 
 // === UTILITIES ===
 export {
@@ -78,4 +77,4 @@ export type {
 } from './utils';
 
 // === VERSION INFO ===
-export const version = require('../package.json').version;
+export import version from "../package.json".version;

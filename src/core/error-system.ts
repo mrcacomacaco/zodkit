@@ -11,7 +11,6 @@
 
 import * as pc from 'picocolors';
 import { z } from 'zod';
-import { writeFileSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 // === UNIFIED ERROR TYPES ===
@@ -68,8 +67,8 @@ export interface RetryOptions {
 
 export class ErrorSystem {
   private static instance: ErrorSystem;
-  private errorLog: ErrorContext[] = [];
-  private recoveryStrategies: Map<ErrorType, RecoverySuggestion[]> = new Map();
+  private readonly errorLog: ErrorContext[] = [];
+  private readonly recoveryStrategies: Map<ErrorType, RecoverySuggestion[]> = new Map();
 
   private constructor() {
     this.initializeRecoveryStrategies();

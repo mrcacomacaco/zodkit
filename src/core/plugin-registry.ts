@@ -45,13 +45,13 @@ export interface PluginSearchOptions {
 // === PLUGIN REGISTRY ===
 
 export class PluginRegistry extends EventEmitter {
-  private installedPlugins: Map<string, PluginPackageInfo> = new Map();
-  private packageCache: Map<string, PluginPackageInfo> = new Map();
-  private cacheExpiry = 5 * 60 * 1000; // 5 minutes
+  private readonly installedPlugins: Map<string, PluginPackageInfo> = new Map();
+  private readonly packageCache: Map<string, PluginPackageInfo> = new Map();
+  private readonly cacheExpiry = 5 * 60 * 1000; // 5 minutes
 
   constructor(
-    private workingDirectory: string = process.cwd(),
-    private globalMode: boolean = false
+    private readonly workingDirectory: string = process.cwd(),
+    private readonly globalMode: boolean = false
   ) {
     super();
     this.loadInstalledPlugins();

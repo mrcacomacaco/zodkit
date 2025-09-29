@@ -52,8 +52,8 @@ export interface DebugContext {
 // === UNIFIED SCHEMA TESTER ===
 
 export class SchemaTester {
-  private results: Map<string, TestResult> = new Map();
-  private coverage: Map<string, number> = new Map();
+  private readonly results: Map<string, TestResult> = new Map();
+  private readonly coverage: Map<string, number> = new Map();
 
   /**
    * Run comprehensive schema tests
@@ -116,7 +116,6 @@ export class SchemaTester {
 
     for (const testCase of testCases) {
       try {
-        const parsed = schema.parse(testCase.input);
         if (!testCase.shouldPass) {
           result.errors.push({
             type: 'validation',
@@ -246,7 +245,6 @@ export class SchemaTester {
     for (const test of playgroundTests) {
       try {
         const start = performance.now();
-        const parsed = schema.parse(test.input);
         const duration = performance.now() - start;
 
         result.warnings.push(`✓ ${test.name}: ${duration.toFixed(2)}ms`);

@@ -6,7 +6,7 @@
 import * as pc from 'picocolors';
 import { watch } from 'chokidar';
 import { ScaffoldEngine, GeneratedSchema, PatternDetector } from '../../core/schema-generation';
-import { ScaffoldDashboardUI } from '../ui/dashboard';
+import { ScaffoldDashboardUI } from '../ui/dashboard.tsx';
 import { ConfigManager } from '../../core/config';
 import { writeFileSync, readFileSync, existsSync } from 'fs';
 import * as path from 'path';

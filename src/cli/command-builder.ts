@@ -15,8 +15,8 @@ export type CommandCategory = 'analysis' | 'generation' | 'testing' | 'transform
  * Streamlined command builder that automatically applies appropriate option groups
  */
 export class CommandBuilder {
-  private command: Command;
-  private category: CommandCategory;
+  private readonly command: Command;
+  private readonly category: CommandCategory;
 
   constructor(name: string, description: string, category: CommandCategory = 'basic') {
     this.command = new Command(name);
@@ -146,8 +146,7 @@ export const CommandConfigs = {
     .argument('[target]', 'specific schema or pattern to analyze')
     .option('-m, --mode <mode>', 'analysis mode: check, hint, fix, full', 'full')
     .option('--auto-fix', 'automatically apply safe fixes')
-    .option('--fast', 'use cached results when available')
-    .option('-s, --severity <level>', 'minimum severity to report: error, warning, all', 'all'),
+    .option('--fast', 'use cached results when available'),
 
   hint: () => createCommand('hint', 'Performance & best practice suggestions', 'analysis')
     .argument('[patterns...]', 'file patterns to analyze')

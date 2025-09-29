@@ -10,7 +10,6 @@
  */
 
 import { EventEmitter } from 'events';
-import { createReadStream, promises as fs } from 'fs';
 import { Transform, pipeline } from 'stream';
 import { promisify } from 'util';
 import * as pc from 'picocolors';
@@ -37,9 +36,9 @@ export interface MemoryThresholds {
 
 export class MemoryMonitor extends EventEmitter {
   private interval: NodeJS.Timeout | null = null;
-  private thresholds: MemoryThresholds;
-  private stats: MemoryStats[] = [];
-  private maxStatsHistory = 100;
+  private readonly thresholds: MemoryThresholds;
+  private readonly stats: MemoryStats[] = [];
+  private readonly maxStatsHistory = 100;
 
   constructor(thresholds: MemoryThresholds = {
     warningMB: 256,
@@ -131,10 +130,10 @@ export interface StreamingOptions {
 }
 
 export class StreamingProcessor extends EventEmitter {
-  private options: Required<StreamingOptions>;
-  private activeStreams = new Set<NodeJS.ReadableStream>();
-  private processedBytes = 0;
-  private monitor: MemoryMonitor;
+  private readonly options: Required<StreamingOptions>;
+  private readonly activeStreams = new Set<NodeJS.ReadableStream>();
+  private readonly processedBytes = 0;
+  private readonly monitor: MemoryMonitor;
 
   constructor(options: StreamingOptions = {}) {
     super();
@@ -360,8 +359,8 @@ export interface OptimizationOptions {
 }
 
 export class MemoryOptimizer extends EventEmitter {
-  private monitor: MemoryMonitor;
-  private options: Required<OptimizationOptions>;
+  private readonly monitor: MemoryMonitor;
+  private readonly options: Required<OptimizationOptions>;
   private gcCount = 0;
   private lastGC = 0;
 

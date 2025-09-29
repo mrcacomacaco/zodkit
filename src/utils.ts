@@ -18,8 +18,8 @@ import { performance } from 'perf_hooks';
 // === FILE WATCHER ===
 
 export class FileWatcher extends EventEmitter {
-  private watchers: Map<string, fs.FSWatcher> = new Map();
-  private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+  private readonly watchers: Map<string, fs.FSWatcher> = new Map();
+  private readonly debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 
   watch(patterns: string[], options?: { debounce?: number }): void {
     const debounce = options?.debounce || 300;
@@ -34,7 +34,7 @@ export class FileWatcher extends EventEmitter {
           // Debounce events
           const key = `${pattern}:${filename}`;
           if (this.debounceTimers.has(key)) {
-            clearTimeout(this.debounceTimers.get(key)!);
+            clearTimeout(this.debounceTimers.get(key));
           }
 
           const timer = setTimeout(() => {
@@ -69,7 +69,7 @@ export class FileWatcher extends EventEmitter {
 // === IGNORE PARSER ===
 
 export class IgnoreParser {
-  private patterns: RegExp[] = [];
+  private readonly patterns: RegExp[] = [];
 
   constructor(ignoreFile?: string) {
     if (ignoreFile && fs.existsSync(ignoreFile)) {
@@ -135,10 +135,10 @@ export interface LoggerOptions {
 }
 
 export class Logger {
-  private level: LogLevel;
-  private colors: boolean;
-  private timestamp: boolean;
-  private prefix: string;
+  private readonly level: LogLevel;
+  private readonly colors: boolean;
+  private readonly timestamp: boolean;
+  private readonly prefix: string;
 
   constructor(options: LoggerOptions = {}) {
     this.level = options.level || 'info';
@@ -231,9 +231,9 @@ export interface PerformanceMetrics {
 }
 
 export class PerformanceMonitor {
-  private marks: Map<string, number> = new Map();
+  private readonly marks: Map<string, number> = new Map();
   private metrics: PerformanceMetrics[] = [];
-  private enabled: boolean;
+  private readonly enabled: boolean;
 
   constructor(enabled = true) {
     this.enabled = enabled;
@@ -355,7 +355,7 @@ export interface ProgressiveOutputOptions {
 }
 
 export class ProgressiveOutput {
-  private options: ProgressiveOutputOptions;
+  private readonly options: ProgressiveOutputOptions;
 
   constructor(options: ProgressiveOutputOptions) {
     this.options = options;
@@ -500,7 +500,7 @@ export class Utils {
   }) {
     this.watcher = new FileWatcher();
     this.ignore = new IgnoreParser(options?.ignoreFile);
-    this.logger = new Logger({ level: options?.logLevel });
+    this.logger = new Logger({ level: options?.logLevel || 'info' });
     this.performance = new PerformanceMonitor(options?.performanceEnabled);
 
     // Determine output mode from options

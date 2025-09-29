@@ -8,7 +8,7 @@ import { Command } from 'commander';
 import { ConfigManager } from '../../core/config';
 import { SchemaDiscovery } from '../../core/infrastructure';
 import { SchemaMapper } from '../../core/infrastructure';
-import { SchemaMapUI } from '../ui/dashboard';
+import { SchemaMapUI } from '../ui/dashboard.tsx';
 import { writeFileSync } from 'fs';
 
 interface GlobalOptions {

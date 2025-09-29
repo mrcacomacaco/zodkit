@@ -36,7 +36,7 @@ export interface UserPreferences {
  * Interactive onboarding system
  */
 export class OnboardingFlow {
-  private preferences: Partial<UserPreferences> = {};
+  private readonly preferences: Partial<UserPreferences> = {};
 
   /**
    * Start the complete onboarding flow
@@ -117,7 +117,7 @@ export class OnboardingFlow {
     console.log(pc.cyan('\n⚡ Setting up your ZodKit environment:\n'));
 
     for (const step of steps) {
-      if (step.skipCondition && step.skipCondition()) {
+      if (step.skipCondition?.()) {
         console.log(pc.gray(`⏭️  Skipping: ${step.title}`));
         continue;
       }

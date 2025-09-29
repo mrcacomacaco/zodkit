@@ -10,7 +10,6 @@
 
 import * as pc from 'picocolors';
 import { Command } from 'commander';
-import { z } from 'zod';
 import { ConfigManager } from '../../core/config';
 import { SchemaTransformation } from '../../core/schema-transformation';
 import { Infrastructure } from '../../core/infrastructure';

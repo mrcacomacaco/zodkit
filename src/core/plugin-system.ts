@@ -4,7 +4,6 @@
  */
 
 import { EventEmitter } from 'events';
-import { Command } from 'commander';
 import { GlobalOptions } from '../cli/global-options';
 
 /**
@@ -109,13 +108,13 @@ export interface PluginContext {
  * Plugin registry and manager
  */
 export class PluginManager extends EventEmitter {
-  private plugins: Map<string, Plugin> = new Map();
-  private hooks: Map<keyof PluginHooks, Array<{ plugin: string; handler: Function }>> = new Map();
-  private commands: Map<string, { plugin: string; command: PluginCommand }> = new Map();
+  private readonly plugins: Map<string, Plugin> = new Map();
+  private readonly hooks: Map<keyof PluginHooks, Array<{ plugin: string; handler: Function }>> = new Map();
+  private readonly commands: Map<string, { plugin: string; command: PluginCommand }> = new Map();
   private middleware: Array<{ plugin: string; middleware: PluginMiddleware }> = [];
-  private rules: Map<string, { plugin: string; rule: PluginRule }> = new Map();
+  private readonly rules: Map<string, { plugin: string; rule: PluginRule }> = new Map();
 
-  constructor(private context: Omit<PluginContext, 'emit' | 'on'>) {
+  constructor(private readonly context: Omit<PluginContext, 'emit' | 'on'>) {
     super();
   }
 

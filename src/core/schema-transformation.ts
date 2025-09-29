@@ -12,7 +12,6 @@
 
 import { z } from 'zod';
 import * as pc from 'picocolors';
-import { diffLines } from 'diff';
 
 // === UNIFIED TRANSFORMATION TYPES ===
 
@@ -62,8 +61,8 @@ export interface MigrationStep {
 // === UNIFIED SCHEMA TRANSFORMER ===
 
 export class SchemaTransformer {
-  private history: TransformationResult[] = [];
-  private schemas: Map<string, z.ZodTypeAny> = new Map();
+  private readonly history: TransformationResult[] = [];
+  private readonly schemas: Map<string, z.ZodTypeAny> = new Map();
 
   /**
    * Transform schemas based on operation type

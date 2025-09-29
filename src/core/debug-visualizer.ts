@@ -39,7 +39,7 @@ export interface FlowDiagramOptions {
 // === DEBUG VISUALIZER ===
 
 export class DebugVisualizer {
-  private colorize: boolean;
+  private readonly colorize: boolean;
 
   constructor(colorize: boolean = true) {
     this.colorize = colorize;
@@ -319,7 +319,6 @@ export class DebugVisualizer {
    */
   generateSessionDashboard(session: DebugSession): string {
     const duration = (session.endTime || Date.now()) - session.startTime;
-    const traces = session.traces;
     const profiles = Array.from(session.profiles.values());
 
     let output = '';
