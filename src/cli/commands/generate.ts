@@ -58,7 +58,7 @@ export async function generateCommand(options: GenerateOptions): Promise<void> {
     validatePath(options.output, 'output');
 
     // Load configuration
-    const configManager = new ConfigManager();
+    const configManager = ConfigManager.getInstance();
     await configManager.loadConfig(options.config);
 
     const legacyGenerator = new ZodSchemaGenerator();
@@ -135,7 +135,9 @@ class ZodSchemaGenerator implements LegacySchemaGenerator {
     const fileName = filePath.split('/').pop()?.replace(/\.(ts|tsx)$/, '') ?? 'Generated';
     const schemaName = this.pascalCase(fileName) + 'Schema';
 
-    return this.formatSchemaFile(schemaName, 'z.unknown() // TODO: Extract from TypeScript types');
+    // TypeScript file generation requires ts-morph or TypeScript compiler API
+    // For now, return placeholder - use scaffold command for TS->Zod conversion
+    return this.formatSchemaFile(schemaName, 'z.unknown() // Use: zodkit scaffold ' + filePath);
   }
 
   generateFromOpenAPI(spec: Record<string, unknown>, options: GenerateOptions): string {

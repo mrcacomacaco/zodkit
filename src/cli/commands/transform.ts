@@ -44,7 +44,7 @@ export async function transformCommand(
     }
 
     // Initialize systems
-    const configManager = new ConfigManager();
+    const configManager = ConfigManager.getInstance();
     const config = await configManager.loadConfig();
     const infra = new Infrastructure(config as any);
     const transformer = new SchemaTransformer();

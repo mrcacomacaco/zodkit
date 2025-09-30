@@ -55,7 +55,7 @@ export async function testCommand(options: TestCommandOptions): Promise<void> {
   try {
     console.log(pc.blue('🧪 zodkit test - Instant Schema Testing & Validation with Fuzzing'));
 
-    const configManager = new ConfigManager();
+    const configManager = ConfigManager.getInstance();
     await configManager.loadConfig();
     const config = (configManager as any).getConfig();
 

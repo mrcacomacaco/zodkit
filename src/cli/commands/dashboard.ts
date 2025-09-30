@@ -11,7 +11,7 @@ import { render } from 'ink';
 import * as pc from 'picocolors';
 import { Command } from 'commander';
 import { Dashboard } from '../ui/dashboard';
-import { unifiedConfig } from '../../core/unified-config';
+import { unifiedConfig } from '../../core/config';
 import { Infrastructure } from '../../core/infrastructure';
 import { Utils } from '../../utils';
 

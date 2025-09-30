@@ -5,7 +5,6 @@
 
 import { EventEmitter } from 'events';
 import { WebSocket } from 'ws';
-// @ts-ignore: Reserved for future schema validation
 
 /**
  * Collaboration session types

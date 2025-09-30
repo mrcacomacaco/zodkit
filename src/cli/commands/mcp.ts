@@ -63,7 +63,7 @@ async function startMCPServer(options: MCPOptions, isJsonMode: boolean): Promise
     console.log(pc.blue('🚀 Starting zodkit MCP server...'));
   }
 
-  const configManager = new ConfigManager();
+  const configManager = ConfigManager.getInstance();
   const config = await configManager.loadConfig();
 
   const serverOptions: any = {

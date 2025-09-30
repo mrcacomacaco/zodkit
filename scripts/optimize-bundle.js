@@ -18,8 +18,11 @@ function optimizeFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');
   let optimized = content;
 
-  // Remove debug statements
-  optimized = optimized.replace(/console\.debug\([^)]*\);?\n?/g, '');
+  // Remove or replace debug statements carefully
+  // For standalone debug calls, remove them
+  optimized = optimized.replace(/^\s*console\.debug\([^)]*\);?\s*$/gm, '');
+  // For arrow function bodies, replace with empty function
+  optimized = optimized.replace(/=> console\.debug\([^)]*\)/g, '=> {}');
   optimized = optimized.replace(/console\.log\(['"`]DEBUG[^)]*\);?\n?/g, '');
 
   // Remove development-only code blocks
@@ -56,7 +59,10 @@ function createOptimizedEntryPoints() {
 
   // Optimize CLI entry point
   if (fs.existsSync(cliIndexPath)) {
-    const content = fs.readFileSync(cliIndexPath, 'utf8');
+    let content = fs.readFileSync(cliIndexPath, 'utf8');
+
+    // Remove existing shebang if present
+    content = content.replace(/^#!\/usr\/bin\/env node\n?/, '');
 
     // Add production optimizations
     const optimized = `#!/usr/bin/env node

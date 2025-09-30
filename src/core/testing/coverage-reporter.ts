@@ -3,10 +3,17 @@ import { SchemaInfo } from '../infrastructure';
 import { Config } from '../config';
 import fg from 'fast-glob';
 
-// TODO: Replace with proper validation result type
-interface ValidationResult {
+/**
+ * Validation result from schema testing
+ */
+export interface ValidationResult {
   valid: boolean;
-  errors?: any[];
+  errors?: Array<{
+    path: string[];
+    message: string;
+    code: string;
+    file?: string;
+  }>;
 }
 
 export interface CoverageReport {

@@ -59,7 +59,7 @@ export async function scaffoldCommand(
     }
 
     // Load configuration
-    const configManager = new ConfigManager();
+    const configManager = ConfigManager.getInstance();
     const config = await configManager.loadConfig(options.config);
 
     // Load custom patterns if provided

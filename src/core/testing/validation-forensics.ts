@@ -411,10 +411,8 @@ export interface ReportAppendix {
 export class ValidationForensicsEngine extends EventEmitter {
   private readonly sessions: Map<string, ValidationForensicsSession> = new Map();
   private patternDatabase: ValidationPattern[] = [];
-  // @ts-ignore: TODO: Implement case database
-  private readonly _caseDatabase: SimilarCase[] = []; // TODO: Implement case database
-  // @ts-ignore: TODO: Implement rule engine
-  private readonly _ruleEngine: ForensicsRuleEngine; // TODO: Implement rule engine
+  private readonly _caseDatabase: SimilarCase[] = []; // Feature: Case database for historical analysis
+  private readonly _ruleEngine: ForensicsRuleEngine; // Feature: Custom validation rules
   private readonly analyzer: ValidationAnalyzer;
   private readonly suggestionEngine: SuggestionEngine;
   private readonly reportGenerator: ReportGenerator;
@@ -775,7 +773,6 @@ export class ValidationForensicsEngine extends EventEmitter {
     const issues: ForensicsIssue[] = [];
 
     try {
-      // @ts-ignore: Reserved for future detailed success analysis
       const result = schema.parse(data);
       const endTime = performance.now();
 

@@ -13,7 +13,7 @@
 
 import * as pc from 'picocolors';
 import { Command } from 'commander';
-import { unifiedConfig } from '../../core/unified-config';
+import { unifiedConfig } from '../../core/config';
 import { Infrastructure } from '../../core/infrastructure';
 import { DebugTracer, DebugConfig, setGlobalTracer } from '../../core/debug-tracer';
 import { Utils } from '../../utils';

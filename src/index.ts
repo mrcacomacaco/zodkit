@@ -30,10 +30,8 @@ export type {
 } from './core/analysis';
 
 // === CONFIGURATION ===
-export { ConfigManager } from './core/config';
-export type { Config } from './core/config';
-export { unifiedConfig } from './core/unified-config';
-export { configManager, UnifiedConfigManager as UnifiedConfigSystem, UnifiedConfigSchema as UnifiedConfigSchemaV2, ConfigPresets } from './core/unified-config-system';
+export { ConfigManager, configManager, unifiedConfig, ConfigSchema } from './core/config';
+export type { Config, RuleSeverityType } from './core/config';
 
 // === ERROR RECOVERY ===
 export {

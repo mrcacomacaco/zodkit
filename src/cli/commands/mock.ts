@@ -35,7 +35,7 @@ export async function mockCommand(
       console.log(pc.blue('🎭 zodkit mock') + pc.gray(' - Generating realistic mock data...'));
     }
 
-    const configManager = new ConfigManager();
+    const configManager = ConfigManager.getInstance();
     const config = await configManager.loadConfig();
     const discovery = new SchemaDiscovery(config as any);
     const generator = new MockGenerator();

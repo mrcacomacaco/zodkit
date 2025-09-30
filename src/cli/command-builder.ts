@@ -268,7 +268,6 @@ export const CommandConfigs = {
   benchmark: () => createCommand('benchmark', 'Run performance benchmarks on your schemas', 'testing')
     .alias('bench')
     .argument('[schema]', 'specific schema to benchmark')
-    .option('--iterations <n>', 'number of benchmark iterations', '10000')
     .option('--warmup <n>', 'number of warmup rounds', '1000')
     .option('--data <path>', 'test data file path')
     .option('--baseline', 'save results as performance baseline')

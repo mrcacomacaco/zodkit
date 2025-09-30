@@ -186,7 +186,7 @@ async function generateContracts(
     console.log(`\n📄 Generating ${contractType.toUpperCase()} contracts...`);
   }
 
-  const configManager = new ConfigManager();
+  const configManager = ConfigManager.getInstance();
   const config = await configManager.loadConfig();
 
   // Discover schemas

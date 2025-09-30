@@ -5,7 +5,6 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
-// @ts-ignore: Reserved for future hash-based refactoring
 
 export interface RefactorOptions {
   dryRun?: boolean;
@@ -122,7 +121,6 @@ export interface RefactorMetrics {
 }
 
 export class RefactorAssistant {
-  // @ts-ignore: Reserved for future backup functionality
   private readonly backupDir = '.zodkit/backups';
   private readonly operationHistory: RefactorOperation[] = [];
 
@@ -507,7 +505,6 @@ export class RefactorAssistant {
 
     while ((match = importRegex.exec(content)) !== null) {
       const imports = match[1];
-      // @ts-ignore: Reserved for future module path analysis
 
       if (imports?.includes(operation.target)) {
         if (operation.type === 'rename') {

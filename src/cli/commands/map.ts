@@ -33,7 +33,7 @@ export async function mapCommand(
   try {
     console.log(pc.blue('🗺️  zodkit map') + pc.gray(' - Mapping schema relationships...'));
 
-    const configManager = new ConfigManager();
+    const configManager = ConfigManager.getInstance();
     const config = await configManager.loadConfig();
     const discovery = new SchemaDiscovery(config as any);
     const mapper = new SchemaMapper();

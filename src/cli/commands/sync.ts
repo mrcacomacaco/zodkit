@@ -22,7 +22,7 @@ export async function syncCommand(options: SyncCommandOptions): Promise<void> {
   try {
     console.log(pc.blue('🔄 zodkit sync - Zero-Config Schema Discovery & Sync'));
 
-    const configManager = new ConfigManager();
+    const configManager = ConfigManager.getInstance();
     await configManager.loadConfig();
     const config = (configManager as any).getConfig();
 

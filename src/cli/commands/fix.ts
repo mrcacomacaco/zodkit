@@ -9,7 +9,7 @@
 import * as pc from 'picocolors';
 import { Command } from 'commander';
 import { readFileSync, writeFileSync } from 'fs';
-import { unifiedConfig } from '../../core/unified-config';
+import { unifiedConfig } from '../../core/config';
 import { Analyzer } from '../../core/analysis';
 import { Infrastructure } from '../../core/infrastructure';
 import { Utils } from '../../utils';

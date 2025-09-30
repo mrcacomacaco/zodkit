@@ -75,7 +75,7 @@ export async function explainCommand(
 
   try {
     // Initialize components
-    const configManager = new ConfigManager();
+    const configManager = ConfigManager.getInstance();
     const config = await configManager.loadConfig();
     const cache = new SchemaCache();
     const discovery = new SchemaDiscovery(config as any, cache);
