@@ -380,6 +380,7 @@ export class SchemaCache {
 	private readonly directory: string;
 	private readonly maxSize: number;
 	private readonly enabled: boolean;
+	private readonly compressionEnabled: boolean;
 
 	constructor(config: InfrastructureConfig = {}) {
 		this.ttl = config.cache?.ttl || 3600000; // 1 hour default

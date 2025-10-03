@@ -7,7 +7,7 @@
 
 import * as readline from 'node:readline';
 import * as pc from 'picocolors';
-import { PluginDevToolkit, type PluginScaffoldOptions } from './plugin-dev-toolkit';
+import { PluginDevToolkit, type PluginScaffoldOptions } from './plugin-system';
 
 // === INTERACTIVE PLUGIN CREATION ===
 

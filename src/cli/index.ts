@@ -194,11 +194,11 @@ program.addCommand(
 			const globalOpts = command?.opts() || {};
 
 			try {
-				const { PluginRegistry } = await import('../core/plugin-registry');
-				const { PluginDevToolkit } = await import('../core/plugin-dev-toolkit');
-				const { initializePluginSystem } = await import('../core/plugin-system');
+				const { PluginRegistry, PluginDevToolkit, initializePluginSystem } = await import(
+					'../core/plugin-system'
+				);
 
-				const registry = new PluginRegistry(process.cwd(), globalOpts.global);
+				const registry = new PluginRegistry(process.cwd());
 				const toolkit = new PluginDevToolkit(process.cwd());
 
 				switch (action) {
