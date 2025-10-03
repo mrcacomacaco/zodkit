@@ -3,4 +3,4 @@
  * @module Logger
  */
 
-export { Logger, LogLevel, LoggerOptions } from '../utils';
+export { Logger, LoggerOptions, LogLevel } from '../utils';

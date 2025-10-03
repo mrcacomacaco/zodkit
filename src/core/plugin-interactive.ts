@@ -5,9 +5,9 @@
  * Interactive CLI for creating zodkit plugins
  */
 
+import * as readline from 'node:readline';
 import * as pc from 'picocolors';
-import * as readline from 'readline';
-import { PluginDevToolkit, PluginScaffoldOptions } from './plugin-dev-toolkit';
+import { PluginDevToolkit, type PluginScaffoldOptions } from './plugin-dev-toolkit';
 
 // === INTERACTIVE PLUGIN CREATION ===
 
@@ -15,134 +15,137 @@ import { PluginDevToolkit, PluginScaffoldOptions } from './plugin-dev-toolkit';
  * Create a plugin interactively with prompts
  */
 export async function createPluginInteractive(name: string, options: any): Promise<void> {
-  console.log(pc.bold(pc.blue('🚀 Welcome to the ZodKit Plugin Creator!')));
-  console.log();
+	console.log(pc.bold(pc.blue('🚀 Welcome to the ZodKit Plugin Creator!')));
+	console.log();
 
-  const scaffoldOptions: PluginScaffoldOptions = {
-    name,
-    description: '',
-    author: '',
-    template: 'basic',
-    typescript: true,
-    git: true,
-    install: true
-  };
+	const scaffoldOptions: PluginScaffoldOptions = {
+		name,
+		description: '',
+		author: '',
+		template: 'basic',
+		typescript: true,
+		git: true,
+		install: true,
+	};
 
-  try {
-    // Use simple prompts for now - in real implementation would use inquirer
-    console.log(pc.cyan('Creating plugin with the following configuration:'));
-    console.log(`  Name: ${pc.green(name)}`);
+	try {
+		// Use simple prompts for now - in real implementation would use inquirer
+		console.log(pc.cyan('Creating plugin with the following configuration:'));
+		console.log(`  Name: ${pc.green(name)}`);
 
-    // Get description
-    scaffoldOptions.description = options.description || `A zodkit plugin: ${name}`;
-    console.log(`  Description: ${scaffoldOptions.description}`);
+		// Get description
+		scaffoldOptions.description = options.description || `A zodkit plugin: ${name}`;
+		console.log(`  Description: ${scaffoldOptions.description}`);
 
-    // Get author
-    scaffoldOptions.author = options.author || 'Anonymous';
-    console.log(`  Author: ${scaffoldOptions.author}`);
+		// Get author
+		scaffoldOptions.author = options.author || 'Anonymous';
+		console.log(`  Author: ${scaffoldOptions.author}`);
 
-    // Get template
-    scaffoldOptions.template = options.template || 'basic';
-    console.log(`  Template: ${scaffoldOptions.template}`);
+		// Get template
+		scaffoldOptions.template = options.template || 'basic';
+		console.log(`  Template: ${scaffoldOptions.template}`);
 
-    // Get language
-    scaffoldOptions.typescript = options.javascript !== true;
-    console.log(`  Language: ${scaffoldOptions.typescript ? 'TypeScript' : 'JavaScript'}`);
+		// Get language
+		scaffoldOptions.typescript = options.javascript !== true;
+		console.log(`  Language: ${scaffoldOptions.typescript ? 'TypeScript' : 'JavaScript'}`);
 
-    console.log();
-    console.log(pc.cyan('🔨 Creating plugin...'));
+		console.log();
+		console.log(pc.cyan('🔨 Creating plugin...'));
 
-    const toolkit = new PluginDevToolkit();
-    await toolkit.scaffoldPlugin(scaffoldOptions);
+		const toolkit = new PluginDevToolkit();
+		await toolkit.scaffoldPlugin(scaffoldOptions);
 
-    console.log();
-    console.log(pc.green('✅ Plugin created successfully!'));
-    console.log();
-    console.log(pc.bold('What you can do next:'));
-    console.log(`  ${pc.cyan('cd')} ${name}`);
-    console.log(`  ${pc.cyan('zodkit plugins test')}     - Test your plugin`);
-    console.log(`  ${pc.cyan('zodkit plugins validate')} - Validate your plugin`);
-    console.log(`  ${pc.cyan('zodkit plugins build')}    - Build for distribution`);
-    console.log(`  ${pc.cyan('zodkit plugins publish')}  - Publish to npm`);
-
-  } catch (error) {
-    console.error(pc.red(`Failed to create plugin: ${error}`));
-    process.exit(1);
-  }
+		console.log();
+		console.log(pc.green('✅ Plugin created successfully!'));
+		console.log();
+		console.log(pc.bold('What you can do next:'));
+		console.log(`  ${pc.cyan('cd')} ${name}`);
+		console.log(`  ${pc.cyan('zodkit plugins test')}     - Test your plugin`);
+		console.log(`  ${pc.cyan('zodkit plugins validate')} - Validate your plugin`);
+		console.log(`  ${pc.cyan('zodkit plugins build')}    - Build for distribution`);
+		console.log(`  ${pc.cyan('zodkit plugins publish')}  - Publish to npm`);
+	} catch (error) {
+		console.error(pc.red(`Failed to create plugin: ${error}`));
+		process.exit(1);
+	}
 }
 
 /**
  * Simple prompt helper (would use inquirer in real implementation)
  */
-function prompt(question: string, defaultValue?: string): Promise<string> {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
+function _prompt(question: string, defaultValue?: string): Promise<string> {
+	return new Promise((resolve) => {
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		});
 
-    const displayQuestion = defaultValue
-      ? `${question} (${pc.gray(defaultValue)}): `
-      : `${question}: `;
+		const displayQuestion = defaultValue
+			? `${question} (${pc.gray(defaultValue)}): `
+			: `${question}: `;
 
-    rl.question(displayQuestion, (answer: string) => {
-      rl.close();
-      resolve(answer.trim() || defaultValue || '');
-    });
-  });
+		rl.question(displayQuestion, (answer: string) => {
+			rl.close();
+			resolve(answer.trim() || defaultValue || '');
+		});
+	});
 }
 
 /**
  * Multiple choice prompt helper
  */
-function promptChoice(question: string, choices: string[], defaultChoice: string): Promise<string> {
-  return new Promise((resolve) => {
-    console.log(question);
-    choices.forEach((choice, index) => {
-      const isDefault = choice === defaultChoice;
-      const marker = isDefault ? pc.green('●') : pc.gray('○');
-      console.log(`  ${marker} ${choice}${isDefault ? pc.gray(' (default)') : ''}`);
-    });
+function _promptChoice(
+	question: string,
+	choices: string[],
+	defaultChoice: string,
+): Promise<string> {
+	return new Promise((resolve) => {
+		console.log(question);
+		choices.forEach((choice, _index) => {
+			const isDefault = choice === defaultChoice;
+			const marker = isDefault ? pc.green('●') : pc.gray('○');
+			console.log(`  ${marker} ${choice}${isDefault ? pc.gray(' (default)') : ''}`);
+		});
 
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		});
 
-    rl.question('Choice: ', (answer: string) => {
-      rl.close();
-      const choice = answer.trim() || defaultChoice;
-      if (choices.includes(choice)) {
-        resolve(choice);
-      } else {
-        console.log(pc.red(`Invalid choice. Please select from: ${choices.join(', ')}`));
-        resolve(promptChoice(question, choices, defaultChoice));
-      }
-    });
-  });
+		rl.question('Choice: ', (answer: string) => {
+			rl.close();
+			const choice = answer.trim() || defaultChoice;
+			if (choices.includes(choice)) {
+				resolve(choice);
+			} else {
+				console.log(pc.red(`Invalid choice. Please select from: ${choices.join(', ')}`));
+				resolve(_promptChoice(question, choices, defaultChoice));
+			}
+		});
+	});
 }
 
 /**
  * Yes/No prompt helper
  */
-function promptConfirm(question: string, defaultValue: boolean = true): Promise<boolean> {
-  return new Promise((resolve) => {
-    const defaultText = defaultValue ? 'Y/n' : 'y/N';
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
+function _promptConfirm(question: string, defaultValue: boolean = true): Promise<boolean> {
+	return new Promise((resolve) => {
+		const defaultText = defaultValue ? 'Y/n' : 'y/N';
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		});
 
-    rl.question(`${question} (${defaultText}): `, (answer: string) => {
-      rl.close();
-      const trimmed = answer.trim().toLowerCase();
-      if (trimmed === '') {
-        resolve(defaultValue);
-      } else {
-        resolve(trimmed === 'y' || trimmed === 'yes');
-      }
-    });
-  });
+		rl.question(`${question} (${defaultText}): `, (answer: string) => {
+			rl.close();
+			const trimmed = answer.trim().toLowerCase();
+			if (trimmed === '') {
+				resolve(defaultValue);
+			} else {
+				resolve(trimmed === 'y' || trimmed === 'yes');
+			}
+		});
+	});
 }
 
 export default { createPluginInteractive };

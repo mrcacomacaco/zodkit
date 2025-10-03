@@ -3,4 +3,4 @@
  * @module PerformanceMonitor
  */
 
-export { PerformanceMonitor, PerformanceMetrics } from '../utils';
+export { PerformanceMetrics, PerformanceMonitor } from '../utils';
