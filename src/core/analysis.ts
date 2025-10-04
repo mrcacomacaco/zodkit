@@ -497,7 +497,7 @@ export class Analyzer {
 
 	private matchesPattern(name: string, patterns: string[]): boolean {
 		return patterns.some((pattern) => {
-			const regex = new RegExp(pattern.replace('*', '.*'));
+			const regex = new RegExp(pattern.replaceAll('*', '.*'));
 			return regex.test(name);
 		});
 	}
@@ -673,15 +673,13 @@ export class DataAnalyzer {
 		options: DataAnalysisOptions,
 	): DataAnalysisResult['fields'][0] {
 		const lowerKey = key.toLowerCase();
-		let type: string = typeof value;
+		const type: string = typeof value;
 		let pattern: string | undefined;
 		let zodType = 'z.unknown()';
 
 		if (value === null) {
-			type = 'null';
 			zodType = 'z.null()';
 		} else if (Array.isArray(value)) {
-			type = 'array';
 			const elementType = value.length > 0 ? typeof value[0] : 'unknown';
 			zodType = `z.array(z.${elementType}())`;
 			if (value.length > 0) {

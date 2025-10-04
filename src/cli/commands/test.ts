@@ -707,7 +707,7 @@ function displayTestResult(result: any, verbose: boolean): void {
 		`${passIcon} ${result.schema}: ${pc.green(`${result.passed} passed`)}, ${result.failed > 0 ? pc.red(`${result.failed} failed`) : pc.gray('0 failed')}, ${pc.gray(`${result.skipped} skipped`)} (${result.duration}ms)`,
 	);
 
-	if (result.coverage.percentage > 0) {
+	if (result.coverage?.percentage && result.coverage.percentage > 0) {
 		const coverageColor =
 			result.coverage.percentage > 80
 				? pc.green
@@ -719,13 +719,13 @@ function displayTestResult(result: any, verbose: boolean): void {
 		);
 	}
 
-	if (result.performance.throughput > 0) {
+	if (result.performance?.throughput && result.performance.throughput > 0) {
 		console.log(
 			`   ${pc.gray('Performance:')} ${result.performance.throughput.toFixed(0)} ops/sec, ${result.performance.avgParseTime.toFixed(2)}ms avg`,
 		);
 	}
 
-	if (verbose && result.failures.length > 0) {
+	if (verbose && result.failures?.length && result.failures.length > 0) {
 		console.log(pc.red('   Failures:'));
 		result.failures.slice(0, 3).forEach((failure: any, i: number) => {
 			console.log(`     ${i + 1}. ${failure.message}`);
@@ -741,10 +741,17 @@ function displayTestResult(result: any, verbose: boolean): void {
 }
 
 async function runAdvancedTesting(
-	tester: SchemaTestingEngine,
+	tester: SchemaTestingEngine | null,
 	options: TestCommandOptions,
 ): Promise<void> {
 	console.log(pc.cyan('\n🚀 Advanced Schema Testing with Comprehensive Fuzzing'));
+
+	// Advanced tester not implemented yet
+	if (!tester) {
+		console.log(pc.yellow('⚠️  Advanced testing engine not available'));
+		console.log(pc.gray('Use standard testing mode instead with: zodkit test --fuzz 1000'));
+		return;
+	}
 
 	// Find schema files to test
 	const schemaFiles = await findSchemaFiles(options.target);

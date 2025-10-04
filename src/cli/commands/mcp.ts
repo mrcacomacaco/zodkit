@@ -290,10 +290,14 @@ async function generateMCPConfig(options: MCPOptions, isJsonMode: boolean): Prom
 		console.log(pc.gray(claudeConfig));
 
 		// Write to file if in a Claude project
-		if (existsSync('.claude')) {
-			const claudePath = '.claude/settings.local.json';
-			writeFileSync(claudePath, claudeConfig);
-			console.log(pc.green(`✅ Saved to ${claudePath}`));
+		try {
+			if (existsSync('.claude')) {
+				const claudePath = '.claude/settings.local.json';
+				writeFileSync(claudePath, claudeConfig);
+				console.log(pc.green(`✅ Saved to ${claudePath}`));
+			}
+		} catch (error) {
+			console.log(pc.yellow(`⚠️  Could not write Claude config: ${error}`));
 		}
 
 		// Cursor configuration
@@ -302,17 +306,21 @@ async function generateMCPConfig(options: MCPOptions, isJsonMode: boolean): Prom
 		console.log(pc.gray(cursorConfig));
 
 		// Write to file if in a Cursor project
-		if (existsSync('.cursor')) {
-			const cursorPath = '.cursor/config.json';
-			let existingConfig = {};
-			if (existsSync(cursorPath)) {
+		try {
+			if (existsSync('.cursor')) {
+				const cursorPath = '.cursor/config.json';
+				let existingConfig = {};
 				try {
-					existingConfig = JSON.parse(require('node:fs').readFileSync(cursorPath, 'utf-8'));
+					if (existsSync(cursorPath)) {
+						existingConfig = JSON.parse(require('node:fs').readFileSync(cursorPath, 'utf-8'));
+					}
 				} catch {}
+				const mergedConfig = { ...existingConfig, ...configs.cursor };
+				writeFileSync(cursorPath, JSON.stringify(mergedConfig, null, 2));
+				console.log(pc.green(`✅ Saved to ${cursorPath}`));
 			}
-			const mergedConfig = { ...existingConfig, ...configs.cursor };
-			writeFileSync(cursorPath, JSON.stringify(mergedConfig, null, 2));
-			console.log(pc.green(`✅ Saved to ${cursorPath}`));
+		} catch (error) {
+			console.log(pc.yellow(`⚠️  Could not write Cursor config: ${error}`));
 		}
 
 		// GitHub Copilot configuration

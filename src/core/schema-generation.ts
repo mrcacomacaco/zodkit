@@ -252,7 +252,7 @@ export class SchemaGenerator {
 		const columns = tableSchema.columns || [];
 
 		const fields = columns.map((col: any) => {
-			let zodType = 'z.unknown()';
+			let zodType: string;
 
 			// Map database types to Zod types
 			switch (col.type) {

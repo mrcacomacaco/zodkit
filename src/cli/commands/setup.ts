@@ -110,8 +110,12 @@ async function initializeProject(
 	}
 
 	// Create project directory if needed
-	if (projectName && !fs.existsSync(projectDir)) {
-		fs.mkdirSync(projectDir, { recursive: true });
+	if (projectName) {
+		try {
+			fs.mkdirSync(projectDir, { recursive: true });
+		} catch (error: any) {
+			if (error.code !== 'EEXIST') throw error;
+		}
 	}
 
 	// Determine preset
@@ -126,8 +130,10 @@ async function initializeProject(
 
 	dirs.forEach((dir) => {
 		const dirPath = path.join(projectDir, dir);
-		if (!fs.existsSync(dirPath)) {
+		try {
 			fs.mkdirSync(dirPath, { recursive: true });
+		} catch (error: any) {
+			if (error.code !== 'EEXIST') throw error;
 		}
 	});
 

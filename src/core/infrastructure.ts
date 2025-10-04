@@ -644,7 +644,7 @@ export class SchemaCache {
 	}
 
 	invalidatePattern(pattern: string): void {
-		const regex = new RegExp(pattern.replace('*', '.*'));
+		const regex = new RegExp(pattern.replaceAll('*', '.*'));
 		const keysToDelete: string[] = [];
 
 		for (const key of this.cache.keys()) {

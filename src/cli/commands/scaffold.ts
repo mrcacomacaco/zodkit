@@ -65,13 +65,14 @@ export async function scaffoldCommand(
 
 		// Load configuration
 		const configManager = ConfigManager.getInstance();
-		const _config = await configManager.loadConfig(options.config);
+		await configManager.loadConfig(options.config);
 
 		// Load custom patterns if provided
-		let _customPatterns: PatternDetector[] = [];
 		if (options.customPatterns) {
 			try {
-				_customPatterns = JSON.parse(readFileSync(options.customPatterns, 'utf-8'));
+				const _customPatterns: PatternDetector[] = JSON.parse(readFileSync(options.customPatterns, 'utf-8'));
+				// Custom patterns loaded but not currently used
+				void _customPatterns;
 			} catch (_error) {
 				if (!options.quiet && !options.json) {
 					console.warn(

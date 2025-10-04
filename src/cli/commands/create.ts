@@ -585,7 +585,7 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 		console.log(pc.blue('✨ zodkit create - Interactive Schema Builder\n'));
 
 		// Check if template is provided via CLI option
-		let useTemplateValue: 'template' | 'scratch' = 'scratch';
+		let useTemplateValue: 'template' | 'scratch';
 		if (validatedOptions.template) {
 			useTemplateValue = 'template';
 		} else {
@@ -660,15 +660,13 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 
 			if (customize) {
 				// Allow user to add more fields
-				let addingFields = true;
-				while (addingFields) {
+				while (true) {
 					const shouldAddField = await confirm({
 						message: 'Add another field?',
 						default: false,
 					});
 
 					if (!shouldAddField) {
-						addingFields = false;
 						break;
 					}
 
@@ -705,8 +703,7 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 			};
 
 			// Add fields interactively
-			let addingFields = true;
-			while (addingFields) {
+			while (true) {
 				console.log(
 					pc.cyan(`\n${schema.fields.length > 0 ? 'Add another field?' : 'Add first field'}`),
 				);
@@ -719,7 +716,6 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 					}));
 
 				if (!shouldAddField) {
-					addingFields = false;
 					break;
 				}
 

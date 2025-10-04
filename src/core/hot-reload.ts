@@ -161,8 +161,7 @@ export class HotReloadManager extends EventEmitter {
 		}
 
 		try {
-			const stats = await stat(absolutePath);
-			const content = await readFile(absolutePath, 'utf-8');
+			const [stats, content] = await Promise.all([stat(absolutePath), readFile(absolutePath, 'utf-8')]);
 			const hash = this.calculateHash(content);
 
 			node = {

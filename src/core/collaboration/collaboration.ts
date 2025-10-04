@@ -3,6 +3,7 @@
  * @module CollaborationEngine
  */
 
+import * as crypto from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { WebSocket } from 'ws';
 
@@ -344,7 +345,7 @@ export class CollaborationEngine extends EventEmitter {
 		config: Partial<CollaborationConfig>,
 		creator: Omit<CollaborationUser, 'id' | 'isActive' | 'lastSeen'>,
 	): Promise<CollaborationSession> {
-		const sessionId = this.generateSessionId();
+		const sessionId = crypto.randomBytes(8).toString('hex');
 
 		const fullConfig: CollaborationConfig = {
 			sessionId,
@@ -361,7 +362,7 @@ export class CollaborationEngine extends EventEmitter {
 		};
 
 		const creatorUser: CollaborationUser = {
-			id: this.generateUserId(),
+			id: crypto.randomBytes(8).toString('hex'),
 			name: creator.name,
 			email: creator.email,
 			role: 'owner',
@@ -418,7 +419,7 @@ export class CollaborationEngine extends EventEmitter {
 			throw new Error('Session is full');
 		}
 
-		const userId = this.generateUserId();
+		const userId = crypto.randomBytes(8).toString('hex');
 		const collaborationUser: CollaborationUser = {
 			id: userId,
 			name: user.name,
@@ -833,20 +834,12 @@ export class CollaborationEngine extends EventEmitter {
 		}, 30000); // Every 30 seconds
 	}
 
-	private generateSessionId(): string {
-		return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-	}
-
-	private generateUserId(): string {
-		return `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-	}
-
 	private generateOperationId(): string {
-		return `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+		return `op-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 	}
 
 	private generateCommentId(): string {
-		return `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+		return `comment-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 	}
 
 	private getPermissionsForRole(role: UserRole): UserPermissions {
@@ -926,7 +919,7 @@ export class CollaborationEngine extends EventEmitter {
 		for (const recentOp of recentOps) {
 			if (this.operationsOverlap(operation, recentOp)) {
 				conflicts.push({
-					id: `conflict-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+					id: `conflict-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`,
 					type: 'content',
 					file: operation.file,
 					operations: [operation.id, recentOp.id],
