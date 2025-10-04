@@ -5,7 +5,10 @@ import inquirer from 'inquirer';
 import * as pc from 'picocolors';
 import { Project } from 'ts-morph';
 import type { z } from 'zod';
-import { DescribeToMetaMigrator, type MigrationOptions as DescribeToMetaOptions } from '../../core/migration/describe-to-meta';
+import {
+	DescribeToMetaMigrator,
+	type MigrationOptions as DescribeToMetaOptions,
+} from '../../core/migration/describe-to-meta';
 import { SchemaTransformer } from '../../core/schema-transformation';
 
 // Type definitions for migration
@@ -144,10 +147,7 @@ export async function migrateCommand(
 /**
  * Handle describe-to-meta migration
  */
-async function handleDescribeToMeta(
-	options: MigrateOptions,
-	isJsonMode: boolean,
-): Promise<void> {
+async function handleDescribeToMeta(options: MigrateOptions, isJsonMode: boolean): Promise<void> {
 	const patterns = options.include || ['**/*.schema.ts', '**/schemas/**/*.ts', '**/types/**/*.ts'];
 	const basePath = process.cwd();
 
@@ -173,7 +173,9 @@ async function handleDescribeToMeta(
 	}
 
 	if (!isJsonMode) {
-		console.log(`${pc.gray('Found')} ${pc.cyan(sourceFiles.length)} ${pc.gray('file(s) to analyze\n')}`);
+		console.log(
+			`${pc.gray('Found')} ${pc.cyan(sourceFiles.length)} ${pc.gray('file(s) to analyze\n')}`,
+		);
 	}
 
 	// Create migrator
@@ -201,7 +203,9 @@ async function handleDescribeToMeta(
 			if (!isJsonMode && !options.interactive) {
 				console.log(pc.green(`✓ ${path.relative(basePath, result.filePath)}`));
 				for (const migration of result.migrations) {
-					console.log(`  ${pc.gray('→')} ${migration.schemaName}: ${migration.originalDescribe} → ${migration.newMeta.split('\n')[0]}...`);
+					console.log(
+						`  ${pc.gray('→')} ${migration.schemaName}: ${migration.originalDescribe} → ${migration.newMeta.split('\n')[0]}...`,
+					);
 				}
 			}
 		}
@@ -219,7 +223,9 @@ async function handleDescribeToMeta(
 	if (options.interactive && !isJsonMode) {
 		console.log(pc.blue(`\n📊 Migration Summary\n`));
 		console.log(`${pc.gray('Files to update:')} ${pc.cyan(allMigrations.length)}`);
-		console.log(`${pc.gray('Total migrations:')} ${pc.cyan(allMigrations.reduce((sum, r) => sum + r.migrationsCount, 0))}\n`);
+		console.log(
+			`${pc.gray('Total migrations:')} ${pc.cyan(allMigrations.reduce((sum, r) => sum + r.migrationsCount, 0))}\n`,
+		);
 
 		// Show detailed preview
 		for (const result of allMigrations) {
@@ -227,13 +233,15 @@ async function handleDescribeToMeta(
 
 			for (const migration of result.migrations) {
 				console.log(`\n  ${pc.cyan(migration.schemaName)} (line ${migration.line})`);
-				console.log(`  ${pc.red('- ' + migration.originalDescribe)}`);
-				console.log(`  ${pc.green('+ ' + migration.newMeta)}`);
+				console.log(`  ${pc.red(`- ${migration.originalDescribe}`)}`);
+				console.log(`  ${pc.green(`+ ${migration.newMeta}`)}`);
 
 				if (migration.suggestions && migration.suggestions.length > 0) {
 					console.log(`  ${pc.gray('Suggestions:')}`);
 					for (const suggestion of migration.suggestions) {
-						console.log(`    ${pc.gray('•')} ${suggestion.type}: ${JSON.stringify(suggestion.value)} (${Math.round(suggestion.confidence * 100)}% confidence)`);
+						console.log(
+							`    ${pc.gray('•')} ${suggestion.type}: ${JSON.stringify(suggestion.value)} (${Math.round(suggestion.confidence * 100)}% confidence)`,
+						);
 					}
 				}
 			}
@@ -283,7 +291,9 @@ async function handleDescribeToMeta(
 
 		if (!isJsonMode) {
 			console.log(pc.green(`\n✅ Successfully migrated ${allMigrations.length} file(s)!`));
-			console.log(`${pc.gray('Total schemas updated:')} ${pc.cyan(allMigrations.reduce((sum, r) => sum + r.migrationsCount, 0))}`);
+			console.log(
+				`${pc.gray('Total schemas updated:')} ${pc.cyan(allMigrations.reduce((sum, r) => sum + r.migrationsCount, 0))}`,
+			);
 		}
 	} else {
 		if (!isJsonMode) {
@@ -314,16 +324,17 @@ async function handleDescribeToMeta(
 /**
  * Handle enhancement prompts for metadata
  */
-async function handleEnhancementPrompts(
-	migrations: any[],
-	project: any,
-): Promise<void> {
+async function handleEnhancementPrompts(migrations: any[], project: any): Promise<void> {
 	console.log(pc.blue('\n✨ Enhanced Metadata Configuration\n'));
 
 	for (const result of migrations) {
 		for (const migration of result.migrations) {
 			console.log(pc.cyan(`\n📝 ${migration.schemaName}`));
-			console.log(pc.gray(`Current metadata: ${Object.keys(migration.newMeta.match(/\{([^}]+)\}/)?.[1] || '').length} fields`));
+			console.log(
+				pc.gray(
+					`Current metadata: ${Object.keys(migration.newMeta.match(/\{([^}]+)\}/)?.[1] || '').length} fields`,
+				),
+			);
 
 			const enhancements = await inquirer.prompt([
 				{
@@ -374,13 +385,18 @@ async function handleEnhancementPrompts(
 						...migration.enhancedMetadata,
 						examples: [example],
 					};
-				} catch (error) {
+				} catch (_error) {
 					console.log(pc.yellow('  ⚠️  Invalid JSON, skipping example'));
 				}
 			}
 
 			// Apply enhancements
-			if (enhancements.id || enhancements.customTitle || enhancements.customCategory || enhancements.tags) {
+			if (
+				enhancements.id ||
+				enhancements.customTitle ||
+				enhancements.customCategory ||
+				enhancements.tags
+			) {
 				const sourceFile = project.getSourceFile(result.filePath);
 				if (sourceFile) {
 					const varDecl = sourceFile.getVariableDeclaration(migration.schemaName);
@@ -391,12 +407,12 @@ async function handleEnhancementPrompts(
 							const metaMatch = initializer.getText().match(/\.meta\(\{([^}]+)\}\)/);
 							if (metaMatch) {
 								const metaContent = metaMatch[1];
-								const metaLines = metaContent.split(',').map(line => line.trim());
+								const metaLines = metaContent.split(',').map((line) => line.trim());
 
 								// Build enhanced metadata
 								const enhancedMeta: any = {};
 								for (const line of metaLines) {
-									const [key, value] = line.split(':').map(s => s.trim());
+									const [key, value] = line.split(':').map((s) => s.trim());
 									if (key && value) {
 										enhancedMeta[key] = value.replace(/['"]/g, '');
 									}
@@ -405,10 +421,11 @@ async function handleEnhancementPrompts(
 								// Apply enhancements
 								if (enhancements.id) enhancedMeta.id = `"${enhancements.id}"`;
 								if (enhancements.customTitle) enhancedMeta.title = `"${enhancements.customTitle}"`;
-								if (enhancements.customCategory) enhancedMeta.category = `"${enhancements.customCategory}"`;
+								if (enhancements.customCategory)
+									enhancedMeta.category = `"${enhancements.customCategory}"`;
 								if (enhancements.tags) {
 									const tags = enhancements.tags.split(',').map((t: string) => t.trim());
-									enhancedMeta.tags = `[${tags.map(t => `"${t}"`).join(', ')}]`;
+									enhancedMeta.tags = `[${tags.map((t) => `"${t}"`).join(', ')}]`;
 								}
 								if (migration.enhancedMetadata?.examples) {
 									enhancedMeta.examples = JSON.stringify(migration.enhancedMetadata.examples);
@@ -416,7 +433,7 @@ async function handleEnhancementPrompts(
 
 								// Format new .meta() call
 								const metaEntries = Object.entries(enhancedMeta).map(
-									([key, value]) => `  ${key}: ${value}`
+									([key, value]) => `  ${key}: ${value}`,
 								);
 								const newMetaCall = `.meta({\n${metaEntries.join(',\n')},\n})`;
 

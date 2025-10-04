@@ -22,7 +22,7 @@ export class FileWatcher extends EventEmitter {
 	private readonly debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 
 	watch(patterns: string[], options?: { debounce?: number }): void {
-		const debounce = options?.debounce || 300;
+		const debounce = options?.debounce ?? 300;
 
 		patterns.forEach((pattern) => {
 			if (this.watchers.has(pattern)) return;
@@ -93,7 +93,9 @@ export class IgnoreParser {
 
 	private loadDefaults(): void {
 		const defaults = ['node_modules/**', 'dist/**', 'coverage/**', '*.log', '.git/**', '.DS_Store'];
-		defaults.forEach((p) => this.addPattern(p));
+		for (const p of defaults) {
+			this.addPattern(p);
+		}
 	}
 
 	private addPattern(pattern: string): void {
@@ -134,10 +136,10 @@ export class Logger {
 	private readonly prefix: string;
 
 	constructor(options: LoggerOptions = {}) {
-		this.level = options.level || 'info';
+		this.level = options.level ?? 'info';
 		this.colors = options.colors ?? true;
 		this.timestamp = options.timestamp ?? false;
-		this.prefix = options.prefix || '';
+		this.prefix = options.prefix ?? '';
 	}
 
 	private shouldLog(level: LogLevel): boolean {
@@ -245,7 +247,7 @@ export class PerformanceMonitor {
 
 		const duration = performance.now() - start;
 		const memAfter = process.memoryUsage().heapUsed;
-		const memBefore = this.marks.get(`${label}_mem`) || memAfter;
+		const memBefore = this.marks.get(`${label}_mem`) ?? memAfter;
 
 		const metrics: PerformanceMetrics = {
 			operation: label,
@@ -494,7 +496,7 @@ export class Utils {
 	}) {
 		this.watcher = new FileWatcher();
 		this.ignore = new IgnoreParser(options?.ignoreFile);
-		this.logger = new Logger({ level: options?.logLevel || 'info' });
+		this.logger = new Logger({ level: options?.logLevel ?? 'info' });
 		this.performance = new PerformanceMonitor(options?.performanceEnabled);
 
 		// Determine output mode from options
@@ -505,7 +507,7 @@ export class Utils {
 
 		this.output = new ProgressiveOutput({
 			mode: outputMode,
-			quiet: options?.quiet || false,
+			quiet: options?.quiet ?? false,
 			colors: true,
 		});
 	}
@@ -561,7 +563,9 @@ export class Utils {
 			if (!inThrottle) {
 				fn(...args);
 				inThrottle = true;
-				setTimeout(() => (inThrottle = false), limit);
+				setTimeout(() => {
+					inThrottle = false;
+				}, limit);
 			}
 		};
 	}

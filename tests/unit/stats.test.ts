@@ -2,9 +2,9 @@
  * @fileoverview Unit tests for stats command
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import { createStatsAggregator } from '../../src/core/schema-stats';
 
 describe('Stats Aggregator', () => {
@@ -196,7 +196,7 @@ export const UserSchema = z.object({
 
 			const stats = aggregator.generateStats({ includeBundleImpact: true });
 			expect(stats.bundleImpact).toBeDefined();
-			expect(stats.bundleImpact!.estimatedSize).toBeGreaterThan(0);
+			expect(stats.bundleImpact?.estimatedSize).toBeGreaterThan(0);
 		});
 
 		it('should identify largest schemas', async () => {
@@ -225,8 +225,8 @@ export const LargeSchema = z.object({
 			await aggregator.addFile(schemaFile);
 
 			const stats = aggregator.generateStats({ includeBundleImpact: true });
-			expect(stats.bundleImpact!.largestSchemas.length).toBeGreaterThan(0);
-			expect(stats.bundleImpact!.largestSchemas[0].name).toBe('LargeSchema');
+			expect(stats.bundleImpact?.largestSchemas.length).toBeGreaterThan(0);
+			expect(stats.bundleImpact?.largestSchemas[0].name).toBe('LargeSchema');
 		});
 
 		it('should provide optimization tips for refinements', async () => {
@@ -244,7 +244,7 @@ export const Schema1 = z.object({ id: z.string() }).refine(() => true);
 			const stats = aggregator.generateStats({ includeBundleImpact: true });
 			expect(stats.bundleImpact).toBeDefined();
 			// Check if optimization tips are present (may be empty if thresholds not met)
-			expect(Array.isArray(stats.bundleImpact!.optimizationTips)).toBe(true);
+			expect(Array.isArray(stats.bundleImpact?.optimizationTips)).toBe(true);
 		});
 
 		it('should calculate size by schema', async () => {
@@ -263,8 +263,8 @@ export const UserSchema = z.object({
 			await aggregator.addFile(schemaFile);
 
 			const stats = aggregator.generateStats({ includeBundleImpact: true });
-			expect(stats.bundleImpact!.bySchema.length).toBeGreaterThan(0);
-			expect(stats.bundleImpact!.bySchema[0].percentOfTotal).toBeGreaterThan(0);
+			expect(stats.bundleImpact?.bySchema.length).toBeGreaterThan(0);
+			expect(stats.bundleImpact?.bySchema[0].percentOfTotal).toBeGreaterThan(0);
 		});
 
 		it('should handle schemas without bundle impact', async () => {

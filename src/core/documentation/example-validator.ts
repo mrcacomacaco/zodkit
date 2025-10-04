@@ -116,9 +116,7 @@ export class ExampleValidator {
 		if (zodType.includes('z.enum([')) {
 			const enumMatch = zodType.match(/z\.enum\(\[([^\]]+)\]/);
 			if (enumMatch) {
-				const values = enumMatch[1]
-					.split(',')
-					.map((v) => v.trim().replace(/['"]/g, ''));
+				const values = enumMatch[1].split(',').map((v) => v.trim().replace(/['"]/g, ''));
 				return { type: 'enum', values };
 			}
 		}

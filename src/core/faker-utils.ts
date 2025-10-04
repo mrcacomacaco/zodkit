@@ -175,7 +175,11 @@ export async function generateByPattern(fieldName: string): Promise<any> {
 	}
 
 	// Date patterns
-	if (lowerField.includes('date') || lowerField.includes('createdat') || lowerField.includes('updatedat')) {
+	if (
+		lowerField.includes('date') ||
+		lowerField.includes('createdat') ||
+		lowerField.includes('updatedat')
+	) {
 		return generateMockDate();
 	}
 
@@ -220,7 +224,11 @@ export async function generateByPattern(fieldName: string): Promise<any> {
 	}
 
 	// Price patterns
-	if (lowerField.includes('price') || lowerField.includes('cost') || lowerField.includes('amount')) {
+	if (
+		lowerField.includes('price') ||
+		lowerField.includes('cost') ||
+		lowerField.includes('amount')
+	) {
 		return generateMockPrice();
 	}
 
@@ -235,7 +243,12 @@ export async function generateByPattern(fieldName: string): Promise<any> {
 	}
 
 	// Image patterns
-	if (lowerField.includes('image') || lowerField.includes('img') || lowerField.includes('photo') || lowerField.includes('picture')) {
+	if (
+		lowerField.includes('image') ||
+		lowerField.includes('img') ||
+		lowerField.includes('photo') ||
+		lowerField.includes('picture')
+	) {
 		return generateMockImage();
 	}
 
@@ -256,13 +269,22 @@ export async function generateByPattern(fieldName: string): Promise<any> {
 	}
 
 	// Quantity/Count patterns
-	if (lowerField.includes('quantity') || lowerField.includes('count') || lowerField.includes('stock')) {
+	if (
+		lowerField.includes('quantity') ||
+		lowerField.includes('count') ||
+		lowerField.includes('stock')
+	) {
 		const faker = await getFaker();
 		return faker.number.int({ min: 0, max: 1000 });
 	}
 
 	// Boolean patterns
-	if (lowerField.includes('is') || lowerField.includes('has') || lowerField.includes('active') || lowerField.includes('enabled')) {
+	if (
+		lowerField.includes('is') ||
+		lowerField.includes('has') ||
+		lowerField.includes('active') ||
+		lowerField.includes('enabled')
+	) {
 		return generateMockBoolean();
 	}
 

@@ -7,12 +7,7 @@
 
 import * as crypto from 'node:crypto';
 import type { ZodSchemaInfo } from '../ast/extractor';
-import type {
-	SchemaMetadata,
-	RegistryEntry,
-	QueryOptions,
-	UpdateOptions,
-} from './types';
+import type { QueryOptions, RegistryEntry, SchemaMetadata, UpdateOptions } from './types';
 
 // === ZODKIT REGISTRY ===
 
@@ -41,9 +36,9 @@ export class ZodKitRegistry {
 			line: schema.line,
 			column: schema.column,
 			schemaType: schema.schemaType,
-			description: schema.description || metadata?.description,
-			examples: schema.examples || metadata?.examples,
-			custom: schema.metadata || metadata?.custom,
+			description: schema.description ?? metadata?.description,
+			examples: schema.examples ?? metadata?.examples,
+			custom: schema.metadata ?? metadata?.custom,
 			zodMeta: schema.metadata,
 			createdAt: now,
 			updatedAt: now,
@@ -176,8 +171,8 @@ export class ZodKitRegistry {
 		// Filter by tags
 		if (options.tags && options.tags.length > 0) {
 			results = results.filter((e) => {
-				const entryTags = e.metadata.tags || [];
-				return options.tags!.some((tag) => entryTags.includes(tag));
+				const entryTags = e.metadata.tags ?? [];
+				return options.tags?.some((tag) => entryTags.includes(tag));
 			});
 		}
 
@@ -353,20 +348,20 @@ export class ZodKitRegistry {
 		if (!this.fileIndex.has(entry.metadata.filePath)) {
 			this.fileIndex.set(entry.metadata.filePath, new Set());
 		}
-		this.fileIndex.get(entry.metadata.filePath)!.add(entry.id);
+		this.fileIndex.get(entry.metadata.filePath)?.add(entry.id);
 
 		// Index by schema type
 		if (!this.typeIndex.has(entry.metadata.schemaType)) {
 			this.typeIndex.set(entry.metadata.schemaType, new Set());
 		}
-		this.typeIndex.get(entry.metadata.schemaType)!.add(entry.id);
+		this.typeIndex.get(entry.metadata.schemaType)?.add(entry.id);
 
 		// Index by tags
 		entry.metadata.tags?.forEach((tag) => {
 			if (!this.tagIndex.has(tag)) {
 				this.tagIndex.set(tag, new Set());
 			}
-			this.tagIndex.get(tag)!.add(entry.id);
+			this.tagIndex.get(tag)?.add(entry.id);
 		});
 	}
 

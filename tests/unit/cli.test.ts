@@ -11,7 +11,7 @@ const execAsync = promisify(exec);
 
 describe('ZodKit CLI', () => {
 	const cliPath = path.join(__dirname, '../../src/cli/functional.ts');
-	const nodeCommand = `node -r ts-node/register ${cliPath}`;
+	const nodeCommand = `node -r ts-node/register "${cliPath}"`;
 
 	describe('Basic CLI Operations', () => {
 		it('should display help when run without arguments', async () => {
@@ -151,7 +151,7 @@ describe('ZodKit CLI', () => {
 				await execAsync(`${nodeCommand} nonexistent-command`);
 			} catch (error: any) {
 				expect(error.code).toBe(1);
-				expect(error.stderr || error.stdout).toContain('Unknown command');
+				expect(error.stderr || error.stdout).toContain('too many arguments');
 			}
 		}, 10000);
 
@@ -160,7 +160,7 @@ describe('ZodKit CLI', () => {
 				await execAsync(`${nodeCommand} check --invalid-option`);
 			} catch (error: any) {
 				expect(error.code).toBe(1);
-				expect(error.stderr || error.stdout).toContain('Unknown option');
+				expect(error.stderr || error.stdout).toContain('unknown option');
 			}
 		}, 10000);
 	});

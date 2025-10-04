@@ -18,6 +18,7 @@ export interface GenerateOptions {
 	watch?: string;
 	input?: string;
 	output?: string;
+	dest?: string; // Command-specific output (alias)
 	name?: string;
 	format?: 'typescript' | 'javascript' | 'zod-only';
 	strict?: boolean;
@@ -37,12 +38,15 @@ export async function generateCommand(options: GenerateOptions): Promise<void> {
 	try {
 		console.log(pc.blue('🎯 zodkit generate - Creating Zod schemas...'));
 
+		// Support both --output (global) and --dest (command-specific)
+		const outputPath = options.dest || options.output;
+
 		if (!options.input) {
 			throw new Error('Input path is required. Use --input to specify source file or directory.');
 		}
 
-		if (!options.output) {
-			throw new Error('Output path is required. Use --output to specify destination directory.');
+		if (!outputPath) {
+			throw new Error('Output path is required. Use --dest to specify destination directory.');
 		}
 
 		// Security: Validate paths to prevent directory traversal attacks
@@ -58,7 +62,7 @@ export async function generateCommand(options: GenerateOptions): Promise<void> {
 		};
 
 		validatePath(options.input, 'input');
-		validatePath(options.output, 'output');
+		validatePath(outputPath, 'output');
 
 		// Load configuration
 		const configManager = ConfigManager.getInstance();
@@ -73,10 +77,10 @@ export async function generateCommand(options: GenerateOptions): Promise<void> {
 
 		console.log(pc.gray(`Source type: ${sourceType}`));
 		console.log(pc.gray(`Input: ${options.input}`));
-		console.log(pc.gray(`Output: ${options.output}`));
+		console.log(pc.gray(`Output: ${outputPath}`));
 
 		// Ensure output directory exists
-		const outputDir = resolve(options.output);
+		const outputDir = resolve(outputPath);
 		if (!existsSync(outputDir)) {
 			mkdirSync(outputDir, { recursive: true });
 		}
@@ -429,7 +433,7 @@ async function generateFromAdvancedSources(
 	services: GeneratorServices,
 	options: GenerateOptions,
 ): Promise<string[]> {
-	const outputDir = resolve(options.output!);
+	const outputDir = resolve((options.dest || options.output)!);
 	const generatedFiles: string[] = [];
 
 	// Generate from JSON with advanced analysis
@@ -661,7 +665,7 @@ async function generateFromJsonFiles(
 	options: GenerateOptions,
 ): Promise<string[]> {
 	const inputPath = resolve(options.input!);
-	const outputDir = resolve(options.output!);
+	const outputDir = resolve((options.dest || options.output)!);
 	const generatedFiles: string[] = [];
 
 	if (inputPath.endsWith('.json')) {
@@ -709,7 +713,7 @@ async function generateFromTypeScriptFiles(
 	options: GenerateOptions,
 ): Promise<string[]> {
 	const inputPath = resolve(options.input!);
-	const outputDir = resolve(options.output!);
+	const outputDir = resolve((options.dest || options.output)!);
 	const generatedFiles: string[] = [];
 
 	// This is a simplified implementation
@@ -745,7 +749,7 @@ function generateFromOpenAPISpec(
 	options: GenerateOptions,
 ): string[] {
 	const inputPath = resolve(options.input!);
-	const outputDir = resolve(options.output!);
+	const outputDir = resolve((options.dest || options.output)!);
 
 	const spec = JSON.parse(readFileSync(inputPath, 'utf-8')) as Record<string, unknown>;
 	const schema = generator.generateFromOpenAPI(spec, options);

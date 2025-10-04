@@ -9,9 +9,6 @@ import { Command } from 'commander';
 import * as pc from 'picocolors';
 import { version } from '../../package.json';
 import { CommandConfigs } from './command-builder';
-// Tree-shaking optimized imports - only import what's needed
-import { analyzeCommand } from './commands/analyze';
-import { checkCommand } from './commands/check';
 import { addGlobalOptions } from './global-options';
 
 // Lazy-load heavy commands to reduce initial bundle size
@@ -29,6 +26,8 @@ const lazyImport = (importFn: () => Promise<any>) => {
 };
 
 // Heavy commands with lazy loading for tree-shaking
+const analyzeCommand = lazyImport(() => import('./commands/analyze'));
+const checkCommand = lazyImport(() => import('./commands/check'));
 const createCommand = lazyImport(() => import('./commands/create'));
 const generateCommand = lazyImport(() => import('./commands/generate'));
 const scaffoldCommand = lazyImport(() => import('./commands/scaffold'));
@@ -52,13 +51,16 @@ const syncCommand = lazyImport(() => import('./commands/sync'));
 const mapCommand = lazyImport(() => import('./commands/map'));
 const dashboardCommand = lazyImport(() => import('./commands/dashboard'));
 const setupCommand = lazyImport(() => import('./commands/setup'));
+const watchCommand = lazyImport(() => import('./commands/watch'));
 
 // Simple aliases with proper argument handling
 const hintCommand = async (patterns?: string | string[], options?: any, command?: Command) => {
 	// hint takes patterns array, but analyze expects target string
 	// If patterns is provided, use the first pattern as target, or undefined if it's an array
 	const target = Array.isArray(patterns) ? undefined : patterns;
-	return analyzeCommand(target, { ...options, mode: 'hint' }, command);
+	const module = await import('./commands/analyze');
+	const handler = module.analyzeCommand || module.default;
+	return handler(target, { ...options, mode: 'hint' }, command);
 };
 const contractCommand = setupCommand;
 const _profileCommand = analyzeCommand;
@@ -166,9 +168,6 @@ program.addCommand(CommandConfigs.sync().action(syncCommand).build());
 program.addCommand(CommandConfigs.map().action(mapCommand).build());
 program.addCommand(CommandConfigs.init().action(initCommand).build());
 program.addCommand(CommandConfigs.docs().action(docsCommand).build());
-
-// Watch Command
-const watchCommand = lazyImport(() => import('./commands/watch'));
 program.addCommand(CommandConfigs.watch().action(watchCommand).build());
 
 // === UTILITY COMMANDS ===
@@ -362,19 +361,23 @@ program.addCommand(
 
 						if (validationResult.errors.length > 0) {
 							console.log(pc.red('Errors:'));
-							validationResult.errors.forEach((error) => console.log(`  • ${error}`));
+							for (const error of validationResult.errors) {
+								console.log(`  • ${error}`);
+							}
 						}
 
 						if (validationResult.warnings.length > 0) {
 							console.log(pc.yellow('Warnings:'));
-							validationResult.warnings.forEach((warning) => console.log(`  • ${warning}`));
+							for (const warning of validationResult.warnings) {
+								console.log(`  • ${warning}`);
+							}
 						}
 
 						if (validationResult.suggestions.length > 0) {
 							console.log(pc.cyan('Suggestions:'));
-							validationResult.suggestions.forEach((suggestion) =>
-								console.log(`  • ${suggestion}`),
-							);
+							for (const suggestion of validationResult.suggestions) {
+								console.log(`  • ${suggestion}`);
+							}
 						}
 
 						console.log();

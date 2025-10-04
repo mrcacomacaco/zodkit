@@ -6,8 +6,8 @@
 import type { SourceFile } from 'ts-morph';
 import { SyntaxKind } from 'ts-morph';
 import type { ZodSchemaInfo } from '../../ast';
-import type { RuleViolation } from '../types';
 import { createFix } from '../fixer';
+import type { RuleViolation } from '../types';
 
 export interface NoLooseObjectsOptions {
 	/** Allow passthrough() in specific cases */
@@ -29,9 +29,11 @@ export function checkNoLooseObjects(
 	const { allowPassthrough = false, allowCatchall = false } = options;
 
 	// Get the schema definition node
-	const declaration = sourceFile.getDescendantsOfKind(SyntaxKind.VariableDeclaration).find((decl) => {
-		return decl.getName() === schema.name;
-	});
+	const declaration = sourceFile
+		.getDescendantsOfKind(SyntaxKind.VariableDeclaration)
+		.find((decl) => {
+			return decl.getName() === schema.name;
+		});
 
 	if (!declaration) return null;
 
@@ -80,7 +82,7 @@ export function checkNoLooseObjects(
 					start: initializer.getStart(),
 					end: initializer.getEnd(),
 					replacement: text.replace('.passthrough()', '').replace(/\.catchall\([^)]*\)/, ''),
-			  })
+				})
 			: undefined,
 	};
 }
@@ -89,5 +91,6 @@ export function checkNoLooseObjects(
  * Create visitor for checking loose objects
  */
 export function createNoLooseObjectsVisitor(options: NoLooseObjectsOptions = {}) {
-	return (schema: ZodSchemaInfo, sourceFile: SourceFile) => checkNoLooseObjects(schema, sourceFile, options);
+	return (schema: ZodSchemaInfo, sourceFile: SourceFile) =>
+		checkNoLooseObjects(schema, sourceFile, options);
 }

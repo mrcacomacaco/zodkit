@@ -3,11 +3,11 @@
  * @module Commands/Diff
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as pc from 'picocolors';
-import { SchemaDiff, type DiffOptions, type SchemaDiffResult } from '../../core/schema-diff';
-import { z } from 'zod';
+import type { z } from 'zod';
+import { type DiffOptions, SchemaDiff, type SchemaDiffResult } from '../../core/schema-diff';
 
 export interface DiffCommandOptions {
 	old: string;
@@ -64,7 +64,7 @@ export async function diffCommand(options: DiffCommandOptions): Promise<void> {
 		const result = diffEngine.diff(oldSchema, newSchema);
 
 		// Format and output results
-		const format = options.format || 'text';
+		const format = options.format ?? 'text';
 		const output = formatDiffResult(result, format);
 
 		if (options.output) {
@@ -72,7 +72,7 @@ export async function diffCommand(options: DiffCommandOptions): Promise<void> {
 			writeFileSync(outputPath, output);
 			console.log(pc.green(`\n✅ Diff report saved to: ${pc.cyan(outputPath)}`));
 		} else {
-			console.log('\n' + output);
+			console.log(`\n${output}`);
 		}
 
 		// Print summary
@@ -108,12 +108,12 @@ async function loadSchema(filePath: string): Promise<z.ZodTypeAny> {
 
 		// Try to find a Zod schema export
 		const schema =
-			module.default ||
-			module.schema ||
-			module.Schema ||
+			module.default ??
+			module.schema ??
+			module.Schema ??
 			Object.values(module).find((exp: any) => exp?._def?.typeName?.startsWith('Zod'));
 
-		if (!schema || !schema._def) {
+		if (!schema?._def) {
 			throw new Error(`No Zod schema found in ${filePath}`);
 		}
 
@@ -134,7 +134,6 @@ function formatDiffResult(result: SchemaDiffResult, format: string): string {
 			return formatAsMarkdown(result);
 		case 'html':
 			return formatAsHTML(result);
-		case 'text':
 		default:
 			return formatAsText(result);
 	}
@@ -147,7 +146,7 @@ function formatAsText(result: SchemaDiffResult): string {
 	let output = '';
 
 	output += pc.bold('\n📊 SCHEMA DIFF REPORT\n');
-	output += '═'.repeat(50) + '\n\n';
+	output += `${'═'.repeat(50)}\n\n`;
 
 	// Breaking changes
 	if (result.breakingChanges.length > 0) {
@@ -172,7 +171,8 @@ function formatAsText(result: SchemaDiffResult): string {
 
 		for (const change of result.changes) {
 			const icon = change.breaking ? '⚠️' : '✓';
-			const color = change.severity === 'error' ? pc.red : change.severity === 'warning' ? pc.yellow : pc.green;
+			const color =
+				change.severity === 'error' ? pc.red : change.severity === 'warning' ? pc.yellow : pc.green;
 
 			output += color(`  ${icon} ${change.type} at ${pc.cyan(change.path)}\n`);
 			output += pc.gray(`     ${change.message}\n\n`);
@@ -181,7 +181,7 @@ function formatAsText(result: SchemaDiffResult): string {
 
 	// Migration guide
 	if (result.migrationGuide) {
-		output += '\n' + '═'.repeat(50) + '\n';
+		output += `\n${'═'.repeat(50)}\n`;
 		output += result.migrationGuide;
 	}
 
@@ -377,14 +377,16 @@ function formatAsHTML(result: SchemaDiffResult): string {
  * Print summary to console
  */
 function printSummary(result: SchemaDiffResult): void {
-	console.log('\n' + pc.bold('📊 SUMMARY'));
+	console.log(`\n${pc.bold('📊 SUMMARY')}`);
 	console.log('─'.repeat(40));
 	console.log(`Total Changes:       ${pc.cyan(String(result.summary.totalChanges))}`);
 	console.log(
 		`Breaking Changes:    ${result.summary.breaking > 0 ? pc.red(String(result.summary.breaking)) : pc.green('0')}`,
 	);
 	console.log(`Non-Breaking:        ${pc.green(String(result.summary.nonBreaking))}`);
-	console.log(`Compatible:          ${result.summary.compatible ? pc.green('✅ Yes') : pc.red('⚠️  No')}`);
+	console.log(
+		`Compatible:          ${result.summary.compatible ? pc.green('✅ Yes') : pc.red('⚠️  No')}`,
+	);
 	console.log('─'.repeat(40));
 }
 

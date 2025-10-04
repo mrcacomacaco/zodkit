@@ -4,7 +4,7 @@ import fg from 'fast-glob';
 import * as pc from 'picocolors';
 import { z } from 'zod';
 import { ConfigManager } from '../../core/config';
-import { SchemaDiscovery } from '../../core/infrastructure';
+import { SchemaDiscovery, type SchemaInfo } from '../../core/infrastructure';
 import { SchemaTester } from '../../core/schema-testing';
 import { TestingInfrastructure, type TestRunConfig } from '../../core/testing-infrastructure';
 
@@ -51,6 +51,19 @@ export interface TestCommandOptions {
 	baseline?: boolean;
 }
 
+/**
+ * Cleanup event listeners and exit
+ */
+function cleanupAndExit(tester: any, testingInfra: any): never {
+	if (tester && typeof tester.removeAllListeners === 'function') {
+		tester.removeAllListeners();
+	}
+	if (testingInfra && typeof testingInfra.removeAllListeners === 'function') {
+		testingInfra.removeAllListeners();
+	}
+	process.exit(0);
+}
+
 export async function testCommand(options: TestCommandOptions): Promise<void> {
 	try {
 		console.log(pc.blue('🧪 zodkit test - Instant Schema Testing & Validation with Fuzzing'));
@@ -86,47 +99,65 @@ export async function testCommand(options: TestCommandOptions): Promise<void> {
 		// Advanced testing mode with comprehensive fuzzing
 		if (options.advanced || options.intensity || options.iterations) {
 			await runAdvancedTesting(advancedTester, options);
+			cleanupAndExit(tester, testingInfra);
 			return;
 		}
 
 		// Comprehensive testing mode with new infrastructure
 		if (options.contract || options.mutation || options.regression) {
 			await runComprehensiveTesting(testingInfra, discovery, options);
+			cleanupAndExit(tester, testingInfra);
 			return;
 		}
 
 		// Generate mode - create test data
 		if (options.generate) {
 			await generateTestData(tester, discovery, options);
+			cleanupAndExit(tester, testingInfra);
 			return;
 		}
 
 		// Benchmark mode - performance comparison
 		if (options.benchmark) {
 			await runBenchmarks(tester, discovery, options);
+			cleanupAndExit(tester, testingInfra);
 			return;
 		}
 
 		// Watch mode - continuous testing
 		if (options.watch) {
 			await startTestWatchMode(tester, discovery, options);
+			cleanupAndExit(tester, testingInfra);
 			return;
 		}
 
 		// Suite mode - run test suite
 		if (options.suite) {
 			await runTestSuite(tester, options);
+			cleanupAndExit(tester, testingInfra);
 			return;
 		}
 
 		// Interactive mode - guided testing
 		if (options.interactive) {
 			await runInteractiveMode(tester, discovery, options);
+			cleanupAndExit(tester, testingInfra);
 			return;
 		}
 
 		// Default: test specific schema or all schemas
 		await runSchemaTests(tester, discovery, options);
+
+		// Cleanup event listeners
+		if (tester && typeof (tester as any).removeAllListeners === 'function') {
+			(tester as any).removeAllListeners();
+		}
+		if (testingInfra && typeof testingInfra.removeAllListeners === 'function') {
+			testingInfra.removeAllListeners();
+		}
+
+		// Exit successfully
+		process.exit(0);
 	} catch (error) {
 		console.error(
 			pc.red('❌ Test command failed:'),
@@ -141,7 +172,7 @@ async function runSchemaTests(
 	discovery: SchemaDiscovery,
 	options: TestCommandOptions,
 ): Promise<void> {
-	let schemas;
+	let schemas: SchemaInfo[];
 
 	if (options.schema) {
 		// Test specific schema
@@ -1200,6 +1231,14 @@ async function runComprehensiveTesting(
 		} else {
 			console.log(pc.green('\n✅ All comprehensive tests passed!'));
 		}
+
+		// Cleanup event listeners
+		if (testingInfra && typeof testingInfra.removeAllListeners === 'function') {
+			testingInfra.removeAllListeners();
+		}
+
+		// Exit successfully
+		process.exit(0);
 	} catch (error) {
 		console.log(
 			pc.red(

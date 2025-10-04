@@ -79,7 +79,7 @@ export class Analyzer {
 	 * Perform comprehensive analysis
 	 */
 	async analyze(input: SchemaLike, options: AnalysisOptions = {}): Promise<AnalysisResult> {
-		const mode = options.mode || 'full';
+		const mode = options.mode ?? 'full';
 		const result: AnalysisResult = {
 			score: 0,
 			level: 'low',
@@ -311,7 +311,7 @@ export class Analyzer {
 		const stats = this.collectDataStats(data);
 
 		// Check for anomalies
-		if ((stats.nullCount || 0) > (stats.totalFields || 0) * 0.5) {
+		if ((stats.nullCount ?? 0) > (stats.totalFields ?? 0) * 0.5) {
 			result.issues.push({
 				type: 'warning',
 				rule: 'high-null-ratio',
@@ -423,7 +423,7 @@ export class Analyzer {
 			check: (schema) => {
 				const issues: Issue[] = [];
 				if (schema instanceof z.ZodNumber) {
-					const checks = (schema as any)._def.checks || [];
+					const checks = (schema as any)._def.checks ?? [];
 					const hasMin = checks.some((c: any) => c.kind === 'min');
 					if (!hasMin) {
 						issues.push({
@@ -536,7 +536,7 @@ export class Analyzer {
 	private hasUnsafePatterns(schema: any): boolean {
 		// Check for patterns that might indicate security issues
 		if (schema instanceof z.ZodString) {
-			const checks = (schema as any)._def.checks || [];
+			const checks = (schema as any)._def.checks ?? [];
 			return !checks.some((c: any) => c.kind === 'regex' || c.kind === 'email');
 		}
 		return false;
@@ -547,7 +547,7 @@ export class Analyzer {
 		const issueCounts = new Map<string, number>();
 
 		issues.forEach((issue) => {
-			issueCounts.set(issue.rule, (issueCounts.get(issue.rule) || 0) + 1);
+			issueCounts.set(issue.rule, (issueCounts.get(issue.rule) ?? 0) + 1);
 		});
 
 		if ((issueCounts.get('no-any') ?? 0) > 0 || (issueCounts.get('any-type') ?? 0) > 0) {
@@ -639,8 +639,8 @@ export class DataAnalyzer {
 		}
 
 		// Generate Zod schema code
-		const zodCode = this.generateZodCode(fields, options.context || 'Data');
-		const typeCode = this.generateTypeCode(options.context || 'Data');
+		const zodCode = this.generateZodCode(fields, options.context ?? 'Data');
+		const typeCode = this.generateTypeCode(options.context ?? 'Data');
 
 		// Calculate confidence based on pattern detection
 		const confidence = patterns.length / Math.max(fields.length, 1);
@@ -649,7 +649,7 @@ export class DataAnalyzer {
 		const complexity = this.calculateComplexity(fields);
 
 		// Generate suggestions
-		if (fields.some(f => !f.pattern)) {
+		if (fields.some((f) => !f.pattern)) {
 			suggestions.push('Consider adding specific validations for fields without patterns');
 		}
 		if (complexity > 5) {
@@ -667,7 +667,11 @@ export class DataAnalyzer {
 		};
 	}
 
-	private analyzeField(key: string, value: any, options: DataAnalysisOptions): DataAnalysisResult['fields'][0] {
+	private analyzeField(
+		key: string,
+		value: any,
+		options: DataAnalysisOptions,
+	): DataAnalysisResult['fields'][0] {
 		const lowerKey = key.toLowerCase();
 		let type: string = typeof value;
 		let pattern: string | undefined;
@@ -690,17 +694,29 @@ export class DataAnalyzer {
 				zodType = 'z.string().email()';
 			}
 			// URL pattern
-			else if (lowerKey.includes('url') || lowerKey.includes('link') || /^https?:\/\//.test(value)) {
+			else if (
+				lowerKey.includes('url') ||
+				lowerKey.includes('link') ||
+				/^https?:\/\//.test(value)
+			) {
 				pattern = 'url';
 				zodType = 'z.string().url()';
 			}
 			// UUID pattern
-			else if (lowerKey.includes('uuid') || lowerKey === 'id' || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+			else if (
+				lowerKey.includes('uuid') ||
+				lowerKey === 'id' ||
+				/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+			) {
 				pattern = 'uuid';
 				zodType = 'z.string().uuid()';
 			}
 			// Date pattern
-			else if (lowerKey.includes('date') || lowerKey.includes('time') || /^\d{4}-\d{2}-\d{2}/.test(value)) {
+			else if (
+				lowerKey.includes('date') ||
+				lowerKey.includes('time') ||
+				/^\d{4}-\d{2}-\d{2}/.test(value)
+			) {
 				pattern = 'date';
 				zodType = 'z.string().datetime()';
 			}
@@ -708,8 +724,7 @@ export class DataAnalyzer {
 			else if (lowerKey.includes('phone') || lowerKey.includes('mobile')) {
 				pattern = 'phone';
 				zodType = 'z.string()';
-			}
-			else {
+			} else {
 				zodType = 'z.string()';
 			}
 		} else if (type === 'number') {
@@ -736,7 +751,7 @@ export class DataAnalyzer {
 	}
 
 	private generateZodCode(fields: DataAnalysisResult['fields'], schemaName: string): string {
-		const fieldLines = fields.map(f => {
+		const fieldLines = fields.map((f) => {
 			const optional = f.optional ? '.optional()' : '';
 			return `  ${f.name}: ${f.type}${optional},`;
 		});
@@ -792,10 +807,10 @@ export class APIInspector {
 	 */
 	async inspectAPI(url: string, options: APIInspectOptions = {}): Promise<APIResponse[]> {
 		const responses: APIResponse[] = [];
-		const methods = options.methods || ['GET'];
-		const sampleCount = options.sampleCount || 1;
-		const timeout = options.timeout || 10000;
-		const headers = options.headers || {};
+		const methods = options.methods ?? ['GET'];
+		const sampleCount = options.sampleCount ?? 1;
+		const timeout = options.timeout ?? 10000;
+		const headers = options.headers ?? {};
 
 		for (const method of methods) {
 			for (let i = 0; i < sampleCount; i++) {
@@ -806,7 +821,7 @@ export class APIInspector {
 					const response = await fetch(url, {
 						method,
 						headers: {
-							'Accept': 'application/json',
+							Accept: 'application/json',
 							'User-Agent': 'ZodKit-API-Inspector/1.0',
 							...headers,
 						},
@@ -824,7 +839,7 @@ export class APIInspector {
 
 					// Parse response body
 					let data: any;
-					const contentType = response.headers.get('content-type') || '';
+					const contentType = response.headers.get('content-type') ?? '';
 
 					if (contentType.includes('application/json')) {
 						data = await response.json();
@@ -835,7 +850,7 @@ export class APIInspector {
 						data = {
 							_type: 'binary',
 							_contentType: contentType,
-							_size: response.headers.get('content-length') || 'unknown',
+							_size: response.headers.get('content-length') ?? 'unknown',
 						};
 					}
 
@@ -846,7 +861,6 @@ export class APIInspector {
 						data,
 						headers: responseHeaders,
 					});
-
 				} catch (error) {
 					// Handle errors (network issues, timeouts, etc.)
 					const errorMessage = error instanceof Error ? error.message : String(error);
@@ -858,7 +872,8 @@ export class APIInspector {
 						data: {
 							_error: true,
 							_message: errorMessage,
-							_type: error instanceof Error && error.name === 'AbortError' ? 'timeout' : 'network_error',
+							_type:
+								error instanceof Error && error.name === 'AbortError' ? 'timeout' : 'network_error',
 						},
 						headers: {},
 					});

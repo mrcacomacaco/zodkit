@@ -7,7 +7,7 @@
 
 import type { SourceFile } from 'ts-morph';
 import type { ZodSchemaInfo } from '../../ast/extractor';
-import { type SchemaVisitor, type VisitorContext } from '../../ast/visitor';
+import type { SchemaVisitor, VisitorContext } from '../../ast/visitor';
 import { createFixer, createFixerContext } from '../fixer';
 import type { RuleViolation } from '../types';
 
@@ -41,7 +41,7 @@ export function checkNoAnyType(
 			schemaName: schema.name,
 			filePath: schema.filePath,
 			line: schema.line,
-			column: schema.column || 0,
+			column: schema.column ?? 0,
 			message: `Schema "${schema.name}" uses z.any() which bypasses type safety. Use z.${opts.alternative}() instead.`,
 			severity: 'error',
 		};

@@ -112,7 +112,9 @@ function removeUnusedFiles() {
 	}
 
 	try {
-		filesToRemove.forEach((pattern) => removePattern(pattern));
+		for (const pattern of filesToRemove) {
+			removePattern(pattern);
+		}
 		if (removedCount > 0) {
 			console.log(`✅ Removed ${removedCount} unused files`);
 		}

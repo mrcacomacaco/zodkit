@@ -9,7 +9,6 @@
  * - Hotspot detection
  */
 
-import type { SourceFile } from 'ts-morph';
 import { createASTParser, createZodExtractor, type ZodSchemaInfo } from './ast';
 
 export interface SchemaStats {
@@ -101,7 +100,7 @@ export class SchemaStatsAggregator {
 		const stats: SchemaStats = {
 			totalSchemas: this.schemas.length,
 			schemasByType: this.calculateTypeDistribution(),
-			complexityMetrics: this.calculateComplexity(options.complexityThreshold || 10),
+			complexityMetrics: this.calculateComplexity(options.complexityThreshold ?? 10),
 			usagePatterns: options.includeUsagePatterns ? this.analyzeUsagePatterns() : [],
 			hotspots: options.includeHotspots ? this.detectHotspots() : [],
 			recommendations: this.generateRecommendations(),
@@ -119,8 +118,8 @@ export class SchemaStatsAggregator {
 
 		for (const { schema } of this.schemas) {
 			// Use the schemaType field which is already properly extracted
-			const baseType = schema.schemaType || 'unknown';
-			distribution[baseType] = (distribution[baseType] || 0) + 1;
+			const baseType = schema.schemaType ?? 'unknown';
+			distribution[baseType] = (distribution[baseType] ?? 0) + 1;
 		}
 
 		return distribution;
@@ -184,8 +183,8 @@ export class SchemaStatsAggregator {
 		// Use the full type text which contains the complete Zod expression
 		const code = schema.type;
 		// Count nested z.object( occurrences as depth indicator
-		const objectNesting = (code.match(/z\.object\(/g) || []).length;
-		const arrayNesting = (code.match(/z\.array\(/g) || []).length;
+		const objectNesting = (code.match(/z\.object\(/g) ?? []).length;
+		const arrayNesting = (code.match(/z\.array\(/g) ?? []).length;
 		return Math.max(1, objectNesting + arrayNesting);
 	}
 
@@ -329,9 +328,7 @@ export class SchemaStatsAggregator {
 
 		// Complexity recommendations
 		if (complexityMetrics.averageDepth > 3) {
-			recommendations.push(
-				'Consider reducing schema nesting depth for better maintainability',
-			);
+			recommendations.push('Consider reducing schema nesting depth for better maintainability');
 		}
 
 		if (complexityMetrics.complexSchemas.length > 0) {
@@ -343,13 +340,17 @@ export class SchemaStatsAggregator {
 		// Type distribution recommendations
 		const hasAnyType = this.schemas.some((s) => s.schema.callChain.join('.').includes('z.any()'));
 		if (hasAnyType) {
-			recommendations.push('Replace z.any() with z.unknown() or specific types for better type safety');
+			recommendations.push(
+				'Replace z.any() with z.unknown() or specific types for better type safety',
+			);
 		}
 
 		// Documentation recommendations
 		const undocumented = this.schemas.filter((s) => !s.schema.description).length;
 		if (undocumented > 0) {
-			recommendations.push(`${undocumented} schema(s) missing descriptions - add .describe() calls`);
+			recommendations.push(
+				`${undocumented} schema(s) missing descriptions - add .describe() calls`,
+			);
 		}
 
 		return recommendations;
@@ -376,8 +377,8 @@ export class SchemaStatsAggregator {
 			size += fieldCount * 30; // Each field adds overhead
 
 			// Add size for refinements/transforms (these are expensive)
-			const refinements = (code.match(/\.refine\(/g) || []).length;
-			const transforms = (code.match(/\.transform\(/g) || []).length;
+			const refinements = (code.match(/\.refine\(/g) ?? []).length;
+			const transforms = (code.match(/\.transform\(/g) ?? []).length;
 			size += refinements * 150; // Refinements add significant size
 			size += transforms * 200; // Transforms add even more
 
@@ -401,7 +402,7 @@ export class SchemaStatsAggregator {
 		const sorted = [...schemaEstimates].sort((a, b) => b.estimatedSize - a.estimatedSize);
 		const largestSchemas = sorted.slice(0, 5).map((s) => {
 			const schema = this.schemas.find((sch) => sch.schema.name === s.name)?.schema;
-			const code = schema?.callChain.join('.') || '';
+			const code = schema?.callChain.join('.') ?? '';
 
 			const reasons: string[] = [];
 			if (code.includes('.refine(')) reasons.push('Complex refinements');
@@ -412,7 +413,7 @@ export class SchemaStatsAggregator {
 			return {
 				name: s.name,
 				estimatedSize: s.estimatedSize,
-				reason: reasons.join(', ') || 'Complex schema',
+				reason: reasons.join(', ') ?? 'Complex schema',
 			};
 		});
 

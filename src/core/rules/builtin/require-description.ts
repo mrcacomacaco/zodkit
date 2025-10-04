@@ -7,8 +7,8 @@
 
 import type { SourceFile } from 'ts-morph';
 import type { ZodSchemaInfo } from '../../ast/extractor';
-import { type SchemaVisitor, type VisitorContext } from '../../ast/visitor';
-import { createFixer, createFixerContext, type Fix } from '../fixer';
+import type { SchemaVisitor, VisitorContext } from '../../ast/visitor';
+import { createFixer, createFixerContext } from '../fixer';
 import type { RuleViolation } from '../types';
 
 export interface RequireDescriptionOptions {
@@ -50,7 +50,7 @@ export function checkDescription(
 	const hasMeta = schema.metadata?.description;
 	const hasTSDoc = schema.description && opts.allowTSDoc;
 
-	const description = hasMeta || (hasTSDoc && schema.description) || '';
+	const description = hasMeta ?? (hasTSDoc && schema.description) ?? '';
 
 	// Check if description exists
 	if (!hasDescribe && !description) {
@@ -58,7 +58,7 @@ export function checkDescription(
 			schemaName: schema.name,
 			filePath: schema.filePath,
 			line: schema.line,
-			column: schema.column || 0,
+			column: schema.column ?? 0,
 			message: `Schema "${schema.name}" is missing a description. Add .describe() or TSDoc comment.`,
 			severity: 'error',
 		};
@@ -109,7 +109,7 @@ export function checkDescription(
 			schemaName: schema.name,
 			filePath: schema.filePath,
 			line: schema.line,
-			column: schema.column || 0,
+			column: schema.column ?? 0,
 			message: `Schema "${schema.name}" description is too short (${description.length} chars, minimum: ${opts.minLength}).`,
 			severity: 'warning',
 		};
@@ -127,11 +127,12 @@ export function createRequireDescriptionVisitor(
 	options: RequireDescriptionOptions = {},
 ): SchemaVisitor {
 	return {
-		enter(context: VisitorContext) {
+		enter(context: VisitorContext): undefined {
 			const violation = checkDescription(context.schema, sourceFile, options);
 			if (violation) {
 				violations.push(violation);
 			}
+			return undefined;
 		},
 	};
 }

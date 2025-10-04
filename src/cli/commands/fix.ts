@@ -66,7 +66,7 @@ Force: ${options.force ? 'enabled' : 'disabled'}`,
 
 		// Auto-discover schemas
 		const discovery = infra.discovery;
-		const schemas = await discovery.autoDiscover(target ? undefined : process.cwd());
+		const schemas = await discovery.findSchemas({ useCache: true });
 
 		if (schemas.length === 0) {
 			if (!isQuiet && !isJsonMode) {
@@ -143,7 +143,12 @@ Force: ${options.force ? 'enabled' : 'disabled'}`,
 					console.log(`💡 Run ${pc.cyan('zodkit analyze')} for details`);
 				}
 			}
-			return;
+			// Cleanup with timeout and exit
+			await Promise.race([
+				infra.shutdown(),
+				new Promise((resolve) => setTimeout(resolve, 2000)), // 2s timeout
+			]);
+			process.exit(0);
 		}
 
 		// Filter fixes based on options
@@ -246,6 +251,13 @@ Force: ${options.force ? 'enabled' : 'disabled'}`,
 				console.log(`💡 Run ${pc.cyan('zodkit check')} to verify the fixes`);
 			}
 		}
+
+		// Cleanup with timeout and exit successfully
+		await Promise.race([
+			infra.shutdown(),
+			new Promise((resolve) => setTimeout(resolve, 2000)), // 2s timeout
+		]);
+		process.exit(0);
 	} catch (error) {
 		if (isJsonMode) {
 			console.log(

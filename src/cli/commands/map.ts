@@ -8,7 +8,6 @@ import type { Command } from 'commander';
 import * as pc from 'picocolors';
 import { ConfigManager } from '../../core/config';
 import { SchemaDiscovery, SchemaMapper } from '../../core/infrastructure';
-import { SchemaMapUI } from '../ui/dashboard';
 
 interface GlobalOptions {
 	json?: boolean;
@@ -75,12 +74,16 @@ export async function mapCommand(
 			console.log(JSON.stringify(relationshipMap, null, 2));
 		} else if (options.visualize) {
 			// Launch interactive TUI
+			const { SchemaMapUI } = await import('../ui/dashboard');
 			const mapUI = new SchemaMapUI(relationshipMap);
 			await mapUI.start();
 		} else {
 			// Display text summary
 			displayTextMap(relationshipMap, schemaName);
 		}
+
+		// Exit successfully
+		process.exit(0);
 	} catch (error) {
 		if (isJsonMode) {
 			console.log(

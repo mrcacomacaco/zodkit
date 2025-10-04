@@ -70,7 +70,9 @@ async function showSyncStatus(
 	console.log(pc.cyan('\n📊 Schema Sync Status'));
 
 	try {
-		const conflicts = await (discovery as any).getConflicts();
+		const conflicts = typeof (discovery as any).getConflicts === 'function'
+			? await (discovery as any).getConflicts()
+			: [];
 		const schemas = await discovery.findSchemas({ useCache: true });
 
 		console.log(`   ${pc.gray('Total schemas:')} ${schemas.length}`);
@@ -120,6 +122,8 @@ async function showSyncStatus(
 	console.log(`  ${pc.gray('$')} zodkit sync                    # Run sync`);
 	console.log(`  ${pc.gray('$')} zodkit sync --watch            # Start watch mode`);
 	console.log(`  ${pc.gray('$')} zodkit sync --auto-sync        # Enable auto-sync`);
+
+	process.exit(0);
 }
 
 async function resetSyncCache(
@@ -143,10 +147,13 @@ async function resetSyncCache(
 			console.log(`  ${pc.gray('$')} zodkit sync --status          # Check status`);
 			console.log(`  ${pc.gray('$')} zodkit sync                   # Run sync`);
 		}
+
+		process.exit(0);
 	} catch (error) {
 		console.log(
 			pc.red(`❌ Failed to reset cache: ${error instanceof Error ? error.message : String(error)}`),
 		);
+		process.exit(1);
 	}
 }
 
@@ -286,12 +293,15 @@ async function enableAutoSync(
 			console.log(`  ${pc.gray('$')} zodkit sync --watch           # Manual watch mode`);
 			console.log(`  ${pc.gray('$')} zodkit sync --reset           # Reset and re-sync`);
 		}
+
+		process.exit(0);
 	} catch (error) {
 		console.log(
 			pc.red(
 				`❌ Failed to enable auto-sync: ${error instanceof Error ? error.message : String(error)}`,
 			),
 		);
+		process.exit(1);
 	}
 }
 
@@ -364,6 +374,9 @@ async function runSingleSync(
 			console.log(`  ${pc.gray('$')} zodkit sync --auto-sync        # Enable auto-sync`);
 			console.log(`  ${pc.gray('$')} zodkit check                   # Validate schemas`);
 		}
+
+		// Exit successfully
+		process.exit(0);
 	} catch (error) {
 		console.log(
 			pc.red(`❌ Sync failed: ${error instanceof Error ? error.message : String(error)}`),

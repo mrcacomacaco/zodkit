@@ -134,7 +134,9 @@ export async function watchCommand(options: WatchOptions = {}, _command?: Comman
 			logger.info('Shutting down hot reload system...');
 
 			// Clear all active timers immediately
-			activeTimers.forEach((timer) => clearTimeout(timer));
+			for (const timer of activeTimers) {
+				clearTimeout(timer);
+			}
 			activeTimers.clear();
 
 			try {
@@ -142,7 +144,7 @@ export async function watchCommand(options: WatchOptions = {}, _command?: Comman
 				await Promise.race([
 					hotReloadManager.stop(),
 					new Promise((_, reject) =>
-						setTimeout(() => reject(new Error('Hot reload stop timeout')), 2000)
+						setTimeout(() => reject(new Error('Hot reload stop timeout')), 2000),
 					),
 				]).catch((err) => {
 					if (options.verbose) logger.debug('Hot reload stop error:', err);
@@ -153,7 +155,7 @@ export async function watchCommand(options: WatchOptions = {}, _command?: Comman
 					await Promise.race([
 						infrastructure.shutdown(),
 						new Promise((_, reject) =>
-							setTimeout(() => reject(new Error('Infrastructure shutdown timeout')), 2000)
+							setTimeout(() => reject(new Error('Infrastructure shutdown timeout')), 2000),
 						),
 					]).catch((err) => {
 						if (options.verbose) logger.debug('Infrastructure shutdown error:', err);

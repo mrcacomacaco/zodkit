@@ -7,7 +7,7 @@
 
 import type { SourceFile } from 'ts-morph';
 import type { ZodSchemaInfo } from '../../ast/extractor';
-import { type SchemaVisitor, type VisitorContext } from '../../ast/visitor';
+import type { SchemaVisitor, VisitorContext } from '../../ast/visitor';
 import { createFixer, createFixerContext } from '../fixer';
 import type { RuleViolation } from '../types';
 
@@ -40,7 +40,7 @@ export function checkPreferMeta(
 			schemaName: schema.name,
 			filePath: schema.filePath,
 			line: schema.line,
-			column: schema.column || 0,
+			column: schema.column ?? 0,
 			message: `Schema "${schema.name}" uses .describe() instead of .meta(). Consider using .meta() for richer metadata.`,
 			severity: 'info',
 		};
@@ -97,7 +97,7 @@ export function checkPreferMeta(
 				schemaName: schema.name,
 				filePath: schema.filePath,
 				line: schema.line,
-				column: schema.column || 0,
+				column: schema.column ?? 0,
 				message: `Schema "${schema.name}" .meta() is missing recommended fields: ${missingFields.join(', ')}`,
 				severity: 'info',
 			};
@@ -116,11 +116,12 @@ export function createPreferMetaVisitor(
 	options: PreferMetaOptions = {},
 ): SchemaVisitor {
 	return {
-		enter(context: VisitorContext) {
+		enter(context: VisitorContext): undefined {
 			const violation = checkPreferMeta(context.schema, sourceFile, options);
 			if (violation) {
 				violations.push(violation);
 			}
+			return undefined;
 		},
 	};
 }

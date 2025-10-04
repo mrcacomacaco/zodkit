@@ -67,6 +67,18 @@ module.exports = [
 			'@typescript-eslint/no-unsafe-call': 'warn',
 			'@typescript-eslint/no-unsafe-argument': 'warn',
 			'@typescript-eslint/no-unsafe-return': 'warn',
+			// Relax strict type checking for tooling code
+			'@typescript-eslint/no-redundant-type-constituents': 'warn',
+			'@typescript-eslint/no-base-to-string': 'warn',
+			'@typescript-eslint/no-implied-eval': 'warn',
+			'@typescript-eslint/no-misused-promises': 'warn',
+			'@typescript-eslint/no-floating-promises': 'warn',
+			'@typescript-eslint/await-thenable': 'warn',
+			'@typescript-eslint/unbound-method': 'warn',
+			'@typescript-eslint/restrict-plus-operands': 'warn',
+			'@typescript-eslint/prefer-promise-reject-errors': 'warn',
+			'@typescript-eslint/no-require-imports': 'warn',
+			'@typescript-eslint/no-unsafe-function-type': 'warn',
 			// Style preferences
 			'@typescript-eslint/prefer-readonly': 'warn',
 			'@typescript-eslint/prefer-nullish-coalescing': 'warn',

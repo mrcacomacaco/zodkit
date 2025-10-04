@@ -8,7 +8,7 @@
 import type { Node } from 'ts-morph';
 import { SyntaxKind } from 'ts-morph';
 import type { ZodSchemaInfo } from '../ast/extractor';
-import type { TSDocMetadata, SchemaMetadata } from './types';
+import type { SchemaMetadata, TSDocMetadata } from './types';
 
 // === METADATA COLLECTOR ===
 
@@ -74,9 +74,7 @@ export class MetadataCollector {
 			for (const match of customTagMatches) {
 				const [, tagName, tagValue] = match;
 				if (
-					!['description', 'remarks', 'example', 'see', 'since', 'deprecated'].includes(
-						tagName,
-					)
+					!['description', 'remarks', 'example', 'see', 'since', 'deprecated'].includes(tagName)
 				) {
 					metadata.tags![tagName] = tagValue.trim();
 				}
@@ -106,7 +104,7 @@ export class MetadataCollector {
 				return JSON.parse(metaStr) as Record<string, unknown>;
 			} catch {
 				// Fallback to Function for more complex cases
-				// eslint-disable-next-line no-new-func
+
 				const meta = new Function(`return ${metaMatch[1]}`)();
 				return meta as Record<string, unknown>;
 			}
@@ -134,8 +132,7 @@ export class MetadataCollector {
 			const tsDoc = this.extractTSDoc(node);
 			if (tsDoc) {
 				enriched.tsDoc = tsDoc;
-				enriched.description =
-					enriched.description || tsDoc.description || tsDoc.summary;
+				enriched.description = enriched.description || tsDoc.description || tsDoc.summary;
 			}
 		}
 

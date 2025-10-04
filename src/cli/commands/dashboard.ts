@@ -26,8 +26,8 @@ export async function dashboardCommand(
 	options: DashboardOptions = {},
 	command?: Command,
 ): Promise<void> {
-	const globalOpts = command?.parent?.opts() || {};
-	const isJsonMode = options.json || globalOpts.json;
+	const globalOpts = command?.parent?.opts() ?? {};
+	const isJsonMode = options.json ?? globalOpts.json;
 
 	// JSON mode doesn't make sense for interactive TUI
 	if (isJsonMode) {
@@ -84,9 +84,9 @@ export async function dashboardCommand(
 
 		// Launch TUI dashboard
 		const dashboardConfig = {
-			view: options.view || 'main',
-			theme: options.theme || 'dark',
-			compact: options.compact || false,
+			view: options.view ?? 'main',
+			theme: options.theme ?? 'dark',
+			compact: options.compact ?? false,
 			interactive: true,
 		};
 
@@ -153,7 +153,7 @@ export async function simpleDashboardCommand(_options: DashboardOptions = {}): P
 			const dirs = schemas.map((s) => s.filePath.split('/').slice(0, -1).join('/'));
 			const dirCounts = dirs.reduce(
 				(acc, dir) => {
-					acc[dir] = (acc[dir] || 0) + 1;
+					acc[dir] = (acc[dir] ?? 0) + 1;
 					return acc;
 				},
 				{} as Record<string, number>,

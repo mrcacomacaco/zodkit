@@ -6,7 +6,6 @@
  */
 
 import type { SourceFile } from 'ts-morph';
-import { SyntaxKind } from 'ts-morph';
 import type { Fix } from '../rules/fixer';
 
 export interface MigrationResult {
@@ -58,7 +57,7 @@ export interface MigrationOptions {
 }
 
 export class DescribeToMetaMigrator {
-	private options: Required<MigrationOptions>;
+	private readonly options: Required<MigrationOptions>;
 
 	constructor(options: MigrationOptions = {}) {
 		this.options = {
@@ -189,7 +188,7 @@ export class DescribeToMetaMigrator {
 		const metaCall = this.formatMetaCall(metaObject);
 
 		// Replace .describe() with .meta()
-		const newSchema = text.replace(/\.describe\s*\(\s*(['"`]).*?\1\s*\)/, metaCall);
+		const _newSchema = text.replace(/\.describe\s*\(\s*(['"`]).*?\1\s*\)/, metaCall);
 
 		return {
 			schemaName,
@@ -219,7 +218,7 @@ export class DescribeToMetaMigrator {
 	/**
 	 * Infer category from schema name and content
 	 */
-	private inferCategory(schemaName: string, schemaText: string): string | null {
+	private inferCategory(schemaName: string, _schemaText: string): string | null {
 		const name = schemaName.toLowerCase();
 
 		// Common categories

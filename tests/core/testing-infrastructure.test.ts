@@ -11,7 +11,7 @@ import {
 	TestingInfrastructure,
 	type TestSuite,
 } from '../../src/core/testing-infrastructure';
-import { createTestSchema, generateInvalidTestData, generateValidTestData } from '../setup';
+import { createTestSchema, generateInvalidTestData, generateValidTestData } from '../simple-setup';
 
 describe('TestingInfrastructure', () => {
 	let testingInfra: TestingInfrastructure;

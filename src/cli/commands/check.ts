@@ -25,9 +25,9 @@ export async function checkCommand(
 	options: CheckOptions = {},
 	command?: Command,
 ): Promise<void> {
-	const globalOpts = command?.parent?.opts() || {};
-	const isJsonMode = options.json || globalOpts.json;
-	const isQuiet = options.quiet || globalOpts.quiet;
+	const globalOpts = command?.parent?.opts() ?? {};
+	const isJsonMode = options.json ?? globalOpts.json;
+	const isQuiet = options.quiet ?? globalOpts.quiet;
 
 	const utils = new Utils({
 		verbose: globalOpts.verbose,

@@ -5,8 +5,8 @@
  * Generates OpenAPI 3.1 specification from Zod schemas.
  */
 
-import type { DocNode, DocumentationTree } from './tree';
 import { JSONSchemaGenerator } from './json-schema';
+import type { DocNode, DocumentationTree } from './tree';
 
 export interface OpenAPIOptions {
 	/** API title */
@@ -37,8 +37,8 @@ export interface OpenAPIOptions {
 }
 
 export class OpenAPIGenerator {
-	private options: Required<OpenAPIOptions>;
-	private jsonSchemaGenerator: JSONSchemaGenerator;
+	private readonly options: Required<OpenAPIOptions>;
+	private readonly jsonSchemaGenerator: JSONSchemaGenerator;
 
 	constructor(options: OpenAPIOptions = {}) {
 		this.options = {
@@ -79,7 +79,7 @@ export class OpenAPIGenerator {
 		// Add schemas to components
 		const schemas = tree.getSchemas();
 		for (const node of schemas) {
-			const schema = this.jsonSchemaGenerator['generateNodeSchema'](node);
+			const schema = this.jsonSchemaGenerator.generateNodeSchema(node);
 			if (schema) {
 				spec.components.schemas[node.name] = schema;
 			}
@@ -435,8 +435,8 @@ export class OpenAPIGenerator {
 	 */
 	private pluralize(name: string): string {
 		if (name.endsWith('s')) return name;
-		if (name.endsWith('y')) return name.slice(0, -1) + 'ies';
-		return name + 's';
+		if (name.endsWith('y')) return `${name.slice(0, -1)}ies`;
+		return `${name}s`;
 	}
 
 	/**

@@ -28,9 +28,11 @@ export function checkRequireRefinements(
 	const { minFields = 3, checkCustomValidation = true } = options;
 
 	// Get the schema definition node
-	const declaration = sourceFile.getDescendantsOfKind(SyntaxKind.VariableDeclaration).find((decl) => {
-		return decl.getName() === schema.name;
-	});
+	const declaration = sourceFile
+		.getDescendantsOfKind(SyntaxKind.VariableDeclaration)
+		.find((decl) => {
+			return decl.getName() === schema.name;
+		});
 
 	if (!declaration) return null;
 

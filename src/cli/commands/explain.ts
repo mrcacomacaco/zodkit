@@ -153,6 +153,9 @@ export async function explainCommand(
 		} else {
 			displayExplanations(explanations);
 		}
+
+		// Exit successfully
+		process.exit(0);
 	} catch (error) {
 		if (isJsonMode) {
 			console.log(

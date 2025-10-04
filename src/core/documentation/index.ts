@@ -10,9 +10,9 @@
  * - OpenAPI 3.1 specification
  */
 
-export * from './tree';
-export * from './markdown';
+export * from './example-validator';
 export * from './html';
 export * from './json-schema';
+export * from './markdown';
 export * from './openapi';
-export * from './example-validator';
+export * from './tree';

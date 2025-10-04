@@ -3,7 +3,7 @@
  * @module Rules
  */
 
-export * from './types';
-export * from './fixer';
 export * from './builtin';
 export * from './engine';
+export * from './fixer';
+export * from './types';

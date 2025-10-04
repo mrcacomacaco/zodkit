@@ -72,9 +72,9 @@ export interface DocTreeConfig {
  * Build documentation tree from schemas
  */
 export class DocumentationTree {
-	private root: DocNode;
-	private nodeMap: Map<string, DocNode> = new Map();
-	private config: DocTreeConfig;
+	private readonly root: DocNode;
+	private readonly nodeMap: Map<string, DocNode> = new Map();
+	private readonly config: DocTreeConfig;
 
 	constructor(config: DocTreeConfig = {}) {
 		this.config = {
@@ -327,7 +327,7 @@ export class DocumentationTree {
 	/**
 	 * Walk the tree with a visitor function
 	 */
-	walk(visitor: (node: DocNode) => void | boolean, node: DocNode = this.root): void {
+	walk(visitor: (node: DocNode) => undefined | boolean, node: DocNode = this.root): void {
 		const shouldContinue = visitor(node);
 		if (shouldContinue === false) return;
 
@@ -343,6 +343,7 @@ export class DocumentationTree {
 		const result: DocNode[] = [];
 		this.walk((node) => {
 			result.push(node);
+			return undefined;
 		});
 		return result;
 	}
@@ -384,6 +385,7 @@ export class DocumentationTree {
 			if (node.type === 'category') stats.categoryNodes++;
 			if (node.depth > stats.maxDepth) stats.maxDepth = node.depth;
 			stats.totalRelationships += node.relationships.length;
+			return undefined;
 		});
 
 		return stats;

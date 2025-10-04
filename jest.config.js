@@ -61,7 +61,7 @@ module.exports = {
 		'!src/utils/**',
 	],
 	coverageDirectory: 'coverage',
-	coverageThresholds: {
+	coverageThreshold: {
 		global: {
 			branches: 35,
 			functions: 35,

@@ -23,17 +23,25 @@ import { glob } from 'glob';
 import * as pc from 'picocolors';
 import { type WebSocket, WebSocketServer } from 'ws';
 import { z } from 'zod';
+import { Logger } from '../utils/logger';
+import { createZodExtractor } from './ast/extractor';
+import { createASTParser } from './ast/parser';
 import { MemoryOptimizer, StreamingProcessor } from './memory-optimizer';
+import { createCollector } from './metadata/collector';
+import { PerformanceMonitor } from './performance-monitor';
 import { ProgressiveLoader, type ProgressiveLoadingOptions } from './progressive-loader';
 import type { SchemaInfo } from './types';
-import { createASTParser } from './ast/parser';
-import { createZodExtractor } from './ast/extractor';
-import { createCollector } from './metadata/collector';
 
 // === UNIFIED TYPES ===
 
 // Re-export SchemaInfo for backward compatibility
 export type { SchemaInfo };
+
+interface CachedFileContent {
+	content: string;
+	mtime: number;
+	size: number;
+}
 
 export interface InfrastructureConfig {
 	cache?: {
@@ -87,8 +95,8 @@ export class SchemaDiscovery {
 	constructor(
 		config: InfrastructureConfig = {},
 		cache?: SchemaCache,
-		monitor?: unknown,
-		logger?: unknown,
+		monitor?: PerformanceMonitor,
+		logger?: Logger,
 	) {
 		this.config = config;
 		this.cache = cache ?? new SchemaCache(config);
@@ -97,11 +105,7 @@ export class SchemaDiscovery {
 
 		// Initialize progressive loader if configured
 		if (config.progressive && monitor && logger) {
-			this.progressiveLoader = new ProgressiveLoader(
-				config.progressive,
-				monitor as any,
-				logger as any,
-			);
+			this.progressiveLoader = new ProgressiveLoader(config.progressive, monitor, logger);
 		}
 	}
 
@@ -163,7 +167,7 @@ export class SchemaDiscovery {
 		try {
 			const files = await glob(this.patterns, {
 				cwd: basePath,
-				ignore: this.config.discovery?.exclude || [
+				ignore: this.config.discovery?.exclude ?? [
 					'node_modules/**',
 					'dist/**',
 					'.git/**',
@@ -199,7 +203,7 @@ export class SchemaDiscovery {
 		try {
 			const files = await glob(this.patterns, {
 				cwd: basePath,
-				ignore: this.config.discovery?.exclude || [
+				ignore: this.config.discovery?.exclude ?? [
 					'node_modules/**',
 					'dist/**',
 					'.git/**',
@@ -219,7 +223,7 @@ export class SchemaDiscovery {
 						const fileKey = `file_${fullPath}`;
 
 						// Check if file content is cached
-						let content = this.cache.get(fileKey);
+						let content = this.cache.get(fileKey) as CachedFileContent | undefined;
 						if (!content) {
 							const fileContent = fs.readFileSync(fullPath, 'utf8');
 							const stats = fs.statSync(fullPath);
@@ -234,7 +238,7 @@ export class SchemaDiscovery {
 							this.cache.set(fileKey, content, [fullPath]);
 						}
 
-						const discovered = this.parseSchemas((content as any).content as string, fullPath);
+						const discovered = this.parseSchemas(content.content, fullPath);
 						processedFiles.push(relativePath);
 						return discovered;
 					} catch (error) {
@@ -244,7 +248,9 @@ export class SchemaDiscovery {
 				});
 
 				const batchResults = await Promise.all(batchPromises);
-				batchResults.forEach((result) => schemas.push(...result));
+				for (const result of batchResults) {
+					schemas.push(...result);
+				}
 			}
 
 			// Cache the discovery result with all processed files as dependencies
@@ -266,7 +272,7 @@ export class SchemaDiscovery {
 	}
 
 	async autoDiscover(basePath?: string): Promise<SchemaInfo[]> {
-		const searchPath = basePath || process.cwd();
+		const searchPath = basePath ?? process.cwd();
 		const schemas = await this.findSchemas({ basePath: searchPath });
 
 		if (schemas.length === 0) {
@@ -299,7 +305,7 @@ export class SchemaDiscovery {
 		return /z\.\w+\(/.test(content) && /import.*zod/.test(content);
 	}
 
-	private parseSchemas(content: string, filePath: string): SchemaInfo[] {
+	parseSchemas(content: string, filePath: string): SchemaInfo[] {
 		// Use AST-based parsing if enabled
 		if (this.useAST) {
 			return this.parseSchemasAST(content, filePath);
@@ -432,8 +438,8 @@ export class SchemaCache {
 	private readonly compressionEnabled: boolean;
 
 	constructor(config: InfrastructureConfig = {}) {
-		this.ttl = config.cache?.ttl || 3600000; // 1 hour default
-		this.directory = config.cache?.directory || '.zodkit/cache';
+		this.ttl = config.cache?.ttl ?? 3600000; // 1 hour default
+		this.directory = config.cache?.directory ?? '.zodkit/cache';
 		this.enabled = config.cache?.enabled ?? true;
 		this.maxSize = 50 * 1024 * 1024; // 50MB default
 		this.compressionEnabled = true;
@@ -799,13 +805,13 @@ export class SchemaMapper {
 				name: s.name,
 				file: s.filePath,
 				type: s.schemaType,
-				complexity: s.complexity || 0,
+				complexity: s.complexity ?? 0,
 			})),
 			relationships: [] as Array<{ from: string; to: string; type: string }>,
 			metadata: {
 				totalSchemas: schemas.length,
 				totalRelationships: 0,
-				maxDepth: options?.maxDepth || 3,
+				maxDepth: options?.maxDepth ?? 3,
 				circularDependencies: [] as string[][],
 			},
 		};
@@ -860,7 +866,7 @@ export class Validator {
 			result.valid = true;
 		} catch (error) {
 			if (error instanceof z.ZodError) {
-				result.errors = (error as any).errors.map((err: any) => ({
+				result.errors = error.issues.map((err) => ({
 					path: err.path.join('.'),
 					message: err.message,
 					code: err.code,
@@ -900,7 +906,7 @@ export class MCPServer {
 	private readonly capabilities: string[] = ['schema-analysis', 'validation', 'generation'];
 
 	constructor(config: InfrastructureConfig = {}) {
-		this.port = config.mcp?.port || 3456;
+		this.port = config.mcp?.port ?? 3456;
 	}
 
 	async start(): Promise<void> {
@@ -965,7 +971,7 @@ export class MCPServer {
 
 export interface TaskResult<T> {
 	id: string;
-	result: T;
+	result: T | undefined;
 	duration: number;
 	success: boolean;
 	error?: Error;
@@ -996,8 +1002,8 @@ export class ParallelProcessor extends EventEmitter {
 
 	constructor(readonly config: InfrastructureConfig = {}) {
 		super();
-		this.maxConcurrency = config.parallel?.workers || 4;
-		this.timeout = config.parallel?.timeout || 30000;
+		this.maxConcurrency = config.parallel?.workers ?? 4;
+		this.timeout = config.parallel?.timeout ?? 30000;
 		this.enabled = true;
 
 		// Handle memory pressure
@@ -1019,7 +1025,7 @@ export class ParallelProcessor extends EventEmitter {
 		if (!this.enabled || tasks.length === 0) {
 			return tasks.map((_task, i) => ({
 				id: `task_${i}`,
-				result: undefined as any,
+				result: undefined,
 				duration: 0,
 				success: false,
 				error: new Error('Parallel processing disabled or no tasks'),
@@ -1062,7 +1068,7 @@ export class ParallelProcessor extends EventEmitter {
 						} else {
 							return {
 								id: `task_${taskIndex}`,
-								result: undefined as any,
+								result: undefined,
 								duration: 0,
 								success: false,
 								error: result.reason,
@@ -1151,7 +1157,7 @@ export class ParallelProcessor extends EventEmitter {
 		const duration = Date.now() - startTime;
 		return {
 			id: taskId,
-			result: undefined as any,
+			result: undefined,
 			duration,
 			success: false,
 			error: lastError,
@@ -1289,7 +1295,7 @@ export class HealthMonitor {
 	}
 
 	private startMonitoring(): void {
-		const interval = this.config.monitoring?.interval || 60000;
+		const interval = this.config.monitoring?.interval ?? 60000;
 		this.interval = setInterval(() => {
 			this.collectMetrics();
 		}, interval);
@@ -1330,7 +1336,8 @@ export class ErrorReporter {
 		});
 
 		// Log error
-		console.error(pc.red('Error:'), (error as any).message || error);
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		console.error(pc.red('Error:'), errorMessage);
 		if (context) {
 			console.error(pc.gray('Context:'), context);
 		}
@@ -1355,6 +1362,7 @@ export class Infrastructure {
 	public mcp: MCPServer;
 	public parallel: ParallelProcessor;
 	public monitor: HealthMonitor;
+	public performanceMonitor: PerformanceMonitor;
 	public reporter: ErrorReporter;
 	public memoryOptimizer: MemoryOptimizer;
 	public streamingProcessor: StreamingProcessor;
@@ -1375,25 +1383,26 @@ export class Infrastructure {
 
 		this.cache = new SchemaCache(config);
 		this.monitor = new HealthMonitor(config);
+		this.performanceMonitor = new PerformanceMonitor();
 
-		// Create a simple logger for the progressive loader
-		const logger = {
-			info: (msg: string, ...args: any[]) => console.log(`ℹ️  ${msg}`, ...args),
-			debug: (msg: string, ...args: any[]) => console.debug(`🐛 ${msg}`, ...args),
-			warn: (msg: string, ...args: any[]) => console.warn(`⚠️  ${msg}`, ...args),
-			error: (msg: string, ...args: any[]) => console.error(`❌ ${msg}`, ...args),
-		};
+		// Create a logger for the progressive loader
+		const logger = new Logger({
+			level: 'info',
+			colors: true,
+			timestamp: false,
+			prefix: 'Infrastructure',
+		});
 
 		// Initialize progressive loader if configured
 		if (config.progressive) {
 			this.progressiveLoader = new ProgressiveLoader(
 				config.progressive,
-				this.monitor as any,
-				logger as any,
+				this.performanceMonitor,
+				logger,
 			);
 		}
 
-		this.discovery = new SchemaDiscovery(config, this.cache, this.monitor, logger);
+		this.discovery = new SchemaDiscovery(config, this.cache, this.performanceMonitor, logger);
 		this.mapper = new SchemaMapper();
 		this.validator = new Validator();
 		this.mcp = new MCPServer(config);
@@ -1416,9 +1425,8 @@ export class Infrastructure {
 		});
 
 		// Handle cache pressure
-		(this.cache as any).on?.('memoryPressure', () => {
-			console.log(`${pc.yellow('📦 Cache memory pressure - reducing cache size')}`);
-		});
+		// Note: SchemaCache doesn't implement EventEmitter, so this is a no-op
+		// Future enhancement: make SchemaCache extend EventEmitter if memory pressure events are needed
 	}
 
 	async initialize(): Promise<void> {
@@ -1455,15 +1463,14 @@ export class Infrastructure {
 		// Read file and parse schemas from it
 		const fs = await import('node:fs/promises');
 		const content = await fs.readFile(filePath, 'utf-8');
-		return (this.discovery as any).parseSchemas(content, filePath);
+		return this.discovery.parseSchemas(content, filePath);
 	}
 
 	async invalidateCache(filePath?: string): Promise<void> {
 		if (filePath) {
 			await this.cache.invalidate(filePath);
-			if (this.progressiveLoader) {
-				await (this.progressiveLoader as any).invalidateFile(filePath);
-			}
+			// Note: ProgressiveLoader doesn't have invalidateFile method
+			// Cache invalidation is handled by the main cache
 		} else {
 			await this.cache.clear();
 			if (this.progressiveLoader) {
@@ -1507,6 +1514,11 @@ export interface DatabaseAnalysisResult {
 		from: { table: string; column: string };
 		to: { table: string; column: string };
 	}>;
+	_meta?: {
+		experimental?: boolean;
+		mockData?: boolean;
+		realImplementationPending?: boolean;
+	};
 }
 
 /**
@@ -1555,7 +1567,10 @@ export class DatabaseConnector {
 	 *
 	 * @throws Will warn in console that full implementation is pending
 	 */
-	async analyzeDatabase(connectionString: string, options: any = {}): Promise<DatabaseAnalysisResult> {
+	async analyzeDatabase(
+		connectionString: string,
+		_options: Record<string, unknown> = {},
+	): Promise<DatabaseAnalysisResult> {
 		console.warn('⚠️  DatabaseConnector is EXPERIMENTAL - returning mock data only');
 		console.warn('⚠️  Real database connectivity is not yet implemented');
 		console.warn(`⚠️  Requested connection: ${connectionString}`);
@@ -1584,7 +1599,7 @@ export class DatabaseConnector {
 				mockData: true,
 				realImplementationPending: true,
 			},
-		} as any;
+		};
 	}
 }
 

@@ -11,10 +11,11 @@
 
 import type { Command } from 'commander';
 import * as pc from 'picocolors';
-import { Analyzer } from '../../core/analysis';
+import { type AnalysisResult, Analyzer, type Fix, type Issue } from '../../core/analysis';
 import { unifiedConfig } from '../../core/config';
 import { Infrastructure } from '../../core/infrastructure';
 import { createRuleEngine, type RuleViolation } from '../../core/rules';
+import type { SchemaInfo } from '../../core/types';
 import { Utils } from '../../utils';
 
 type AnalyzeMode = 'check' | 'hint' | 'fix' | 'full';
@@ -29,12 +30,22 @@ interface AnalyzeOptions {
 	severity?: 'error' | 'warning' | 'all';
 }
 
+interface AnalysisResultExtended {
+	schema: string;
+	file: string;
+	score: number;
+	level: AnalysisResult['level'];
+	issues: Issue[];
+	suggestions: string[];
+	fixes?: Fix[];
+}
+
 export async function analyzeCommand(
 	target?: string,
 	options: AnalyzeOptions = {},
 	command?: Command,
 ): Promise<void> {
-	const globalOpts = command?.parent?.opts() || {};
+	const globalOpts = command?.parent?.opts() ?? {};
 	const isJsonMode = globalOpts.json;
 	const isQuiet = globalOpts.quiet;
 
@@ -43,7 +54,7 @@ export async function analyzeCommand(
 
 	try {
 		// Determine mode - default to 'full' for best beginner experience
-		const mode = options.mode || detectMode(command?.name()) || 'full';
+		const mode = options.mode ?? detectMode(command?.name()) ?? 'full';
 
 		if (!isQuiet && !isJsonMode) {
 			const modeIcons = {
@@ -91,7 +102,7 @@ export async function analyzeCommand(
 		// Auto-discover schemas with progressive loading if configured
 		const discovery = infra.discovery;
 		const schemas = await discovery.findSchemas({
-			basePath: target || process.cwd(),
+			basePath: target ?? process.cwd(),
 			progressive: options.progressive !== false,
 		});
 
@@ -132,7 +143,7 @@ export async function analyzeCommand(
 
 		// Create rule engine
 		const ruleEngine = createRuleEngine({
-			autoFix: options.autoFix || mode === 'fix',
+			autoFix: options.autoFix ?? mode === 'fix',
 			rules: {
 				'require-description': mode === 'check' || mode === 'full',
 				'prefer-meta': mode === 'hint' || mode === 'full',
@@ -142,38 +153,59 @@ export async function analyzeCommand(
 		});
 
 		// Analyze schemas in parallel for better performance
-		const parallelResults = await infra.parallel.processSchemas(targetSchemas, async (schema) => {
-			// Run new rule-based analysis
-			const ruleResult = await ruleEngine.analyzeFile(schema.filePath);
+		const parallelResults = await infra.parallel.processSchemas(
+			targetSchemas,
+			async (schema: SchemaInfo): Promise<AnalysisResultExtended> => {
+				// Run new rule-based analysis
+				const ruleResult = await ruleEngine.analyzeFile(schema.filePath);
 
-			// Also run legacy analyzer for backward compatibility
-			const legacyResult = await analyzer.analyze(schema as any, {
-				mode: mode === 'full' ? 'full' : (mode as any),
-				autoFix: options.autoFix || mode === 'fix',
-				strict: mode === 'check',
-			});
+				// Also run legacy analyzer for backward compatibility
+				// Map AnalyzeMode to AnalysisMode
+				const analysisMode: 'complexity' | 'rules' | 'api' | 'data' | 'hints' | 'full' =
+					mode === 'check'
+						? 'rules'
+						: mode === 'hint'
+							? 'hints'
+							: mode === 'fix'
+								? 'rules'
+								: 'full';
 
-			// Convert rule violations to issues format
-			const ruleIssues = ruleResult.violations.map((v: RuleViolation) => ({
-				type: v.severity,
-				message: v.message,
-				rule: v.schemaName,
-				line: v.line,
-				column: v.column,
-				fix: v.fix,
-				suggestions: v.suggestions,
-			}));
+				const legacyResult = await analyzer.analyze(
+					{
+						name: schema.name,
+						filePath: schema.filePath,
+					},
+					{
+						mode: analysisMode,
+						autoFix: options.autoFix ?? mode === 'fix',
+						strict: mode === 'check',
+					},
+				);
 
-			return {
-				schema: schema.name,
-				file: schema.filePath,
-				score: legacyResult.score,
-				level: legacyResult.level,
-				issues: [...legacyResult.issues, ...ruleIssues],
-				suggestions: [...legacyResult.suggestions, ...(ruleResult.violations.flatMap((v) => v.suggestions || []))],
-				fixes: legacyResult.fixes,
-			};
-		});
+				// Convert rule violations to issues format
+				const ruleIssues: Issue[] = ruleResult.violations.map((v: RuleViolation) => ({
+					type: v.severity,
+					message: v.message,
+					rule: v.schemaName,
+					line: v.line,
+					column: v.column,
+					severity: v.severity === 'error' ? 3 : v.severity === 'warning' ? 2 : 1,
+				}));
+
+				return {
+					schema: schema.name,
+					file: schema.filePath,
+					score: legacyResult.score,
+					level: legacyResult.level,
+					issues: [...legacyResult.issues, ...ruleIssues],
+					suggestions: [
+						...legacyResult.suggestions,
+						...ruleResult.violations.flatMap((v) => v.suggestions ?? []),
+					],
+					fixes: legacyResult.fixes,
+				};
+			},
+		);
 
 		const results = parallelResults;
 
@@ -196,7 +228,7 @@ export async function analyzeCommand(
 		}
 
 		// Exit code based on issues
-		const hasErrors = results.some((r) => r.issues.some((i: any) => i.type === 'error'));
+		const hasErrors = results.some((r) => r.issues.some((i) => i.type === 'error'));
 
 		if (hasErrors && mode === 'check') {
 			process.exit(1);
@@ -233,7 +265,7 @@ function detectMode(commandName?: string): AnalyzeMode {
 	return 'full';
 }
 
-async function applyFixes(results: any[], isJsonMode: boolean): Promise<void> {
+async function applyFixes(results: AnalysisResultExtended[], isJsonMode: boolean): Promise<void> {
 	const utils = new Utils();
 	const logger = utils.logger;
 
@@ -256,14 +288,14 @@ async function applyFixes(results: any[], isJsonMode: boolean): Promise<void> {
 	}
 }
 
-function confirmFix(fix: any, isJsonMode: boolean): boolean {
+function confirmFix(fix: Fix, isJsonMode: boolean): boolean {
 	if (isJsonMode) return true; // Auto-confirm in JSON mode
 
 	// In interactive mode, would prompt user
 	return fix.impact === 'safe';
 }
 
-function displayResults(results: any[], mode: AnalyzeMode): void {
+function displayResults(results: AnalysisResultExtended[], mode: AnalyzeMode): void {
 	console.log(`\n${pc.bold('Analysis Results')}`);
 	console.log(pc.gray('─'.repeat(60)));
 
@@ -291,7 +323,7 @@ function displayResults(results: any[], mode: AnalyzeMode): void {
 
 		// Display issues
 		if (result.issues.length > 0) {
-			result.issues.forEach((issue: any) => {
+			result.issues.forEach((issue: Issue) => {
 				const icon = issue.type === 'error' ? '❌' : issue.type === 'warning' ? '⚠️' : 'ℹ️';
 				const color =
 					issue.type === 'error' ? pc.red : issue.type === 'warning' ? pc.yellow : pc.blue;
@@ -315,7 +347,7 @@ function displayResults(results: any[], mode: AnalyzeMode): void {
 		// Display available fixes (fix mode)
 		if (mode === 'fix' && result.fixes && result.fixes.length > 0) {
 			console.log(pc.green('  🔧 Available Fixes:'));
-			result.fixes.forEach((fix: any) => {
+			result.fixes.forEach((fix: Fix) => {
 				const impactColor =
 					fix.impact === 'safe' ? pc.green : fix.impact === 'risky' ? pc.yellow : pc.red;
 				console.log(`     • ${fix.description} ${impactColor(`[${fix.impact}]`)}`);
@@ -338,7 +370,7 @@ function displayResults(results: any[], mode: AnalyzeMode): void {
 	}
 
 	if (mode === 'fix') {
-		const totalFixes = results.reduce((sum, r) => sum + (r.fixes?.length || 0), 0);
+		const totalFixes = results.reduce((sum, r) => sum + (r.fixes?.length ?? 0), 0);
 		console.log(pc.green(`  Available fixes: ${totalFixes}`));
 	}
 }
@@ -352,10 +384,12 @@ function startWatchMode(): void {
 	const watcher = utils.watcher;
 	watcher.watch(['**/*.schema.ts', '**/schemas/*.ts']);
 
-	watcher.on('change', async ({ filename }) => {
-		logger.info(`File changed: ${filename}`);
-		// Re-run analysis on changed file
-		// Implementation would go here
+	watcher.on('change', ({ filename }) => {
+		void (async () => {
+			logger.info(`File changed: ${filename}`);
+			// Re-run analysis on changed file
+			// Implementation would go here
+		})();
 	});
 }
 

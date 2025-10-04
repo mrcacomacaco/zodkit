@@ -2,7 +2,7 @@
  * @fileoverview Unit tests for create command helpers
  */
 
-import { describe, it, expect } from '@jest/globals';
+import { describe, expect, it } from '@jest/globals';
 
 // Note: Full create command testing requires interactive prompts
 // These tests focus on the code generation logic

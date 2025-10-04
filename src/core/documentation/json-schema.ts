@@ -32,7 +32,7 @@ export interface JSONSchemaOutput {
 }
 
 export class JSONSchemaGenerator {
-	private options: Required<JSONSchemaOptions>;
+	private readonly options: Required<JSONSchemaOptions>;
 
 	constructor(options: JSONSchemaOptions = {}) {
 		this.options = {
@@ -114,7 +114,7 @@ export class JSONSchemaGenerator {
 	/**
 	 * Generate JSON Schema for a single node
 	 */
-	private generateNodeSchema(node: DocNode): any | null {
+	public generateNodeSchema(node: DocNode): any | null {
 		if (!node.schemaType) return null;
 
 		// Extract Zod schema structure and convert to JSON Schema
@@ -259,9 +259,7 @@ export class JSONSchemaGenerator {
 			schema.type = 'string';
 			const enumMatch = zodType.match(/z\.enum\(\[([^\]]+)\]/);
 			if (enumMatch) {
-				schema.enum = enumMatch[1]
-					.split(',')
-					.map((v) => v.trim().replace(/['"]/g, ''));
+				schema.enum = enumMatch[1].split(',').map((v) => v.trim().replace(/['"]/g, ''));
 			}
 		}
 

@@ -3,10 +3,16 @@
  * @module Commands/Lint
  */
 
-import { existsSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import fg from 'fast-glob';
 import * as pc from 'picocolors';
+import {
+	LintOptionsSchema,
+	PatternsArgSchema,
+	validateCommandOptions,
+} from '../../core/command-validation';
+import { createErrorHandler } from '../../core/error-handler';
 import { RuleEngine, type RuleEngineOptions } from '../../core/rules/engine';
 import { applyFixes } from '../../core/rules/fixer';
 import type { RuleViolation } from '../../core/rules/types';
@@ -14,7 +20,7 @@ import type { RuleViolation } from '../../core/rules/types';
 export interface LintCommandOptions {
 	patterns?: string[];
 	fix?: boolean;
-	rules?: Record<string, boolean | Record<string, any>>;
+	rules?: Record<string, boolean | Record<string, unknown>>;
 	severity?: 'error' | 'warning' | 'info';
 	output?: string;
 	format?: 'text' | 'json';
@@ -28,15 +34,19 @@ export async function lintCommand(
 	patternsArg?: string | string[],
 	options: LintCommandOptions = {},
 ): Promise<void> {
+	// Validate inputs with Zod (outside try block for error handler)
+	const validatedPatterns = PatternsArgSchema.parse(patternsArg);
+	const validatedOptions = validateCommandOptions(LintOptionsSchema, options, 'lint');
+
 	try {
 		console.log(pc.blue('🔍 zodkit lint - Linting Zod schemas...'));
 
 		// Handle patterns from either argument or options
 		let patterns: string[];
-		if (patternsArg) {
-			patterns = Array.isArray(patternsArg) ? patternsArg : [patternsArg];
-		} else if (options.patterns) {
-			patterns = options.patterns;
+		if (validatedPatterns) {
+			patterns = Array.isArray(validatedPatterns) ? validatedPatterns : [validatedPatterns];
+		} else if (validatedOptions.patterns) {
+			patterns = validatedOptions.patterns;
 		} else {
 			patterns = ['**/*.schema.ts', '**/schemas/**/*.ts', 'src/**/*.zod.ts'];
 		}
@@ -57,7 +67,7 @@ export async function lintCommand(
 
 		// Configure rule engine
 		const ruleEngineOptions: RuleEngineOptions = {
-			rules: options.rules || {
+			rules: validatedOptions.rules ?? {
 				'require-description': true,
 				'prefer-meta': true,
 				'no-any-type': true,
@@ -65,7 +75,7 @@ export async function lintCommand(
 				'no-loose-objects': true,
 				'require-refinements': true,
 			},
-			autoFix: options.fix || false,
+			autoFix: validatedOptions.fix ?? false,
 		};
 
 		const ruleEngine = new RuleEngine(ruleEngineOptions);
@@ -90,12 +100,12 @@ export async function lintCommand(
 
 		// Filter by severity if specified
 		let filteredViolations = allViolations;
-		if (options.severity) {
-			filteredViolations = allViolations.filter((v) => v.severity === options.severity);
+		if (validatedOptions.severity) {
+			filteredViolations = allViolations.filter((v) => v.severity === validatedOptions.severity);
 		}
 
 		// Apply fixes if requested
-		if (options.fix && filteredViolations.some((v) => v.fix)) {
+		if (validatedOptions.fix && filteredViolations.some((v) => v.fix)) {
 			console.log(pc.blue('\n🔧 Applying fixes...'));
 
 			const fixableViolations = filteredViolations.filter((v) => v.fix);
@@ -110,7 +120,7 @@ export async function lintCommand(
 		}
 
 		// Output results
-		if (options.format === 'json') {
+		if (validatedOptions.format === 'json') {
 			const jsonOutput = {
 				summary: {
 					totalFiles: files.length,
@@ -122,9 +132,9 @@ export async function lintCommand(
 				violations: filteredViolations,
 			};
 
-			if (options.output) {
-				writeFileSync(resolve(options.output), JSON.stringify(jsonOutput, null, 2));
-				console.log(pc.green(`\n✅ Report saved to: ${options.output}`));
+			if (validatedOptions.output) {
+				writeFileSync(resolve(validatedOptions.output), JSON.stringify(jsonOutput, null, 2));
+				console.log(pc.green(`\n✅ Report saved to: ${validatedOptions.output}`));
 			} else {
 				console.log(JSON.stringify(jsonOutput, null, 2));
 			}
@@ -132,10 +142,10 @@ export async function lintCommand(
 			// Text format
 			printTextReport(fileViolations, filteredViolations);
 
-			if (options.output) {
+			if (validatedOptions.output) {
 				const textReport = generateTextReport(fileViolations, filteredViolations);
-				writeFileSync(resolve(options.output), textReport);
-				console.log(pc.green(`\n✅ Report saved to: ${options.output}`));
+				writeFileSync(resolve(validatedOptions.output), textReport);
+				console.log(pc.green(`\n✅ Report saved to: ${validatedOptions.output}`));
 			}
 		}
 
@@ -148,14 +158,11 @@ export async function lintCommand(
 			process.exit(1);
 		}
 	} catch (error) {
-		console.error(
-			pc.red('❌ Lint command failed:'),
-			error instanceof Error ? error.message : String(error),
-		);
-		if (process.env.NODE_ENV !== 'test') {
-			process.exit(1);
+		if (process.env.NODE_ENV === 'test') {
+			throw error;
 		}
-		throw error;
+		const errorHandler = createErrorHandler();
+		errorHandler.handle(error, { command: 'lint', timestamp: new Date() });
 	}
 }
 
@@ -207,7 +214,7 @@ function generateTextReport(
 	allViolations: RuleViolation[],
 ): string {
 	let report = 'ZODKIT LINT REPORT\n';
-	report += '='.repeat(50) + '\n\n';
+	report += `${'='.repeat(50)}\n\n`;
 
 	if (allViolations.length === 0) {
 		report += '✅ No linting issues found!\n';
@@ -216,7 +223,7 @@ function generateTextReport(
 
 	for (const [file, violations] of fileViolations) {
 		report += `\n${file}\n`;
-		report += '-'.repeat(50) + '\n';
+		report += `${'-'.repeat(50)}\n`;
 
 		for (const violation of violations) {
 			report += `  ${violation.severity.toUpperCase()} ${violation.line}:${violation.column} - ${violation.message} [${violation.schemaName}]\n`;
@@ -240,7 +247,7 @@ function printSummary(fileCount: number, violations: RuleViolation[]): void {
 	const warnings = violations.filter((v) => v.severity === 'warning').length;
 	const infos = violations.filter((v) => v.severity === 'info').length;
 
-	console.log('\n' + pc.bold('📊 SUMMARY'));
+	console.log(`\n${pc.bold('📊 SUMMARY')}`);
 	console.log('─'.repeat(40));
 	console.log(`Files scanned:       ${pc.cyan(String(fileCount))}`);
 	console.log(`Total issues:        ${pc.cyan(String(violations.length))}`);

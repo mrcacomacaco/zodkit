@@ -219,7 +219,7 @@ export class ConfigManager {
 				} else {
 					// Try dynamic import for JS/TS
 					const configModule = await import(configFile);
-					userConfig = configModule.default || configModule;
+					userConfig = configModule.default ?? configModule;
 				}
 			} catch (error) {
 				console.warn(`Warning: Could not load config from ${configFile}`);

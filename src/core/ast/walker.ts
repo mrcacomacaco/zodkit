@@ -11,9 +11,9 @@ import type { ZodSchemaInfo } from './extractor';
 // === TYPES ===
 
 export interface WalkerVisitor {
-	visitSchema?: (schema: ZodSchemaInfo) => void | boolean; // return false to skip children
-	visitNode?: (node: Node) => void | boolean;
-	visitSourceFile?: (sourceFile: SourceFile) => void | boolean;
+	visitSchema?: (schema: ZodSchemaInfo) => undefined | boolean; // return false to skip children
+	visitNode?: (node: Node) => undefined | boolean;
+	visitSourceFile?: (sourceFile: SourceFile) => undefined | boolean;
 }
 
 export interface WalkOptions {
@@ -62,7 +62,6 @@ export class ASTWalker {
 			if (visitor.visitSchema) {
 				const shouldContinue = visitor.visitSchema(schema);
 				if (shouldContinue === false) {
-					continue;
 				}
 			}
 		}
@@ -71,10 +70,7 @@ export class ASTWalker {
 	/**
 	 * Walk and collect nodes
 	 */
-	collect<T extends Node>(
-		sourceFile: SourceFile,
-		predicate: (node: Node) => node is T,
-	): T[] {
+	collect<T extends Node>(sourceFile: SourceFile, predicate: (node: Node) => node is T): T[] {
 		const collected: T[] = [];
 
 		sourceFile.forEachDescendant((node) => {
@@ -109,7 +105,7 @@ export class ASTWalker {
 	 */
 	walkWithDepth(
 		sourceFile: SourceFile,
-		visitor: (node: Node, depth: number) => void | boolean,
+		visitor: (node: Node, depth: number) => undefined | boolean,
 	): void {
 		const walk = (node: Node, depth: number): void => {
 			const shouldContinue = visitor(node, depth);
@@ -128,7 +124,7 @@ export class ASTWalker {
 	 */
 	walkWithParent(
 		sourceFile: SourceFile,
-		visitor: (node: Node, parent: Node | undefined) => void | boolean,
+		visitor: (node: Node, parent: Node | undefined) => undefined | boolean,
 	): void {
 		const walk = (node: Node, parent: Node | undefined): void => {
 			const shouldContinue = visitor(node, parent);

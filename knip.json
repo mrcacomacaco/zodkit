@@ -1,6 +1,10 @@
 {
 	"$schema": "https://unpkg.com/knip@5/schema.json",
-	"entry": ["scripts/**/*.{js,ts}"],
+	"entry": [
+		"src/cli/index.ts",
+		"src/index.ts",
+		"scripts/**/*.{js,ts}"
+	],
 	"project": ["src/**/*.{ts,tsx}", "scripts/**/*.{js,ts}"],
 	"ignore": [
 		"dist/**",
@@ -13,7 +17,7 @@
 		"tests/**/*.test.js",
 		"typedoc.json"
 	],
-	"ignoreDependencies": ["@types/inquirer", "ts-morph", "ts-node", "ultracite"],
+	"ignoreDependencies": ["@types/inquirer", "ts-node", "ultracite"],
 	"ignoreBinaries": [
 		"powershell",
 		"docker-compose",
@@ -26,12 +30,6 @@
 		"0BSD",
 		"CC0-1.0",
 		"Unlicense"
-	],
-	"ignoreUnresolved": [
-		"../../src/core/schema-discovery",
-		"../../src/core/validator",
-		"../../src/utils/performance-monitor",
-		"../../src/core/unified-config-system"
 	],
 	"ignoreExportsUsedInFile": true
 }

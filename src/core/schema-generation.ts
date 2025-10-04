@@ -230,9 +230,11 @@ export class SchemaGenerator {
 	 * Generate Zod schema from DataAnalyzer analysis result
 	 * This is called by the generate command when using --from-json or --from-url
 	 */
-	async generateFromAnalysis(analysis: any, options: any = {}): Promise<any> {
+	async generateFromAnalysis(analysis: any, _options: any = {}): Promise<any> {
 		return {
-			zodCode: analysis.zodCode || 'import { z } from \'zod\';\n\nexport const GeneratedSchema = z.unknown();',
+			zodCode:
+				analysis.zodCode ||
+				"import { z } from 'zod';\n\nexport const GeneratedSchema = z.unknown();",
 			typeCode: analysis.typeCode || 'export type Generated = unknown;',
 			confidence: analysis.confidence || 0,
 			complexity: analysis.complexity || 0,
@@ -534,7 +536,6 @@ export interface MockTemplate {
  */
 export class MockGenerator {
 	private config: MockConfig = {};
-	private templates: Map<string, MockTemplate> = new Map();
 	private fakerInstance: any = null;
 
 	/**
@@ -572,7 +573,7 @@ export class MockGenerator {
 	async generateBatch(
 		schemas: any[],
 		count: number,
-		options: { format?: string; preserveRelationships?: boolean } = {}
+		options: { format?: string; preserveRelationships?: boolean } = {},
 	): Promise<any[]> {
 		const results: any[] = [];
 
@@ -590,7 +591,7 @@ export class MockGenerator {
 
 		// Format results based on options
 		if (options.format === 'typescript') {
-			return results.map(r => `export const mockData = ${JSON.stringify(r, null, 2)};`);
+			return results.map((r) => `export const mockData = ${JSON.stringify(r, null, 2)};`);
 		}
 		if (options.format === 'csv') {
 			return this.convertToCSV(results);
@@ -654,7 +655,7 @@ export class MockGenerator {
 		const csvLines = [headers.join(',')];
 
 		for (const row of results) {
-			const values = headers.map(h => {
+			const values = headers.map((h) => {
 				const value = row[h];
 				if (typeof value === 'string' && value.includes(',')) {
 					return `"${value}"`;
@@ -677,7 +678,7 @@ export class MockGenerator {
 		const headers = Object.keys(results[0]);
 
 		for (const row of results) {
-			const values = headers.map(h => {
+			const values = headers.map((h) => {
 				const value = row[h];
 				if (typeof value === 'string') {
 					return `'${value.replace(/'/g, "''")}'`;
@@ -692,7 +693,7 @@ export class MockGenerator {
 			});
 
 			sqlStatements.push(
-				`INSERT INTO ${tableName} (${headers.join(', ')}) VALUES (${values.join(', ')});`
+				`INSERT INTO ${tableName} (${headers.join(', ')}) VALUES (${values.join(', ')});`,
 			);
 		}
 
@@ -704,7 +705,7 @@ export class MockGenerator {
 
 export { SchemaGenerator as ScaffoldEngine };
 export { SchemaGenerator as DocsGenerator };
-export { SchemaGenerator as AIRulesGenerator};
+export { SchemaGenerator as AIRulesGenerator };
 
 export const createSchemaGenerator = () => new SchemaGenerator();
 

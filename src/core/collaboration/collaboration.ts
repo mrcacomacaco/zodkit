@@ -257,12 +257,12 @@ export class OperationalTransform {
 				if (op1.position.column <= op2.position.column) {
 					op2Prime.position = {
 						...op2.position,
-						column: op2.position.column + (op1.content?.length || 0),
+						column: op2.position.column + (op1.content?.length ?? 0),
 					};
 				} else {
 					op1Prime.position = {
 						...op1.position,
-						column: op1.position.column + (op2.content?.length || 0),
+						column: op1.position.column + (op2.content?.length ?? 0),
 					};
 				}
 			}
@@ -348,16 +348,16 @@ export class CollaborationEngine extends EventEmitter {
 
 		const fullConfig: CollaborationConfig = {
 			sessionId,
-			mode: config.mode || 'live',
-			maxUsers: config.maxUsers || 10,
+			mode: config.mode ?? 'live',
+			maxUsers: config.maxUsers ?? 10,
 			autoSave: config.autoSave ?? true,
-			saveInterval: config.saveInterval || 30000, // 30 seconds
-			conflictResolution: config.conflictResolution || 'manual',
+			saveInterval: config.saveInterval ?? 30000, // 30 seconds
+			conflictResolution: config.conflictResolution ?? 'manual',
 			requireApproval: config.requireApproval ?? false,
 			enableRealTimeSync: config.enableRealTimeSync ?? true,
 			enableComments: config.enableComments ?? true,
 			enableVersioning: config.enableVersioning ?? true,
-			retentionPeriod: config.retentionPeriod || 30 * 24 * 60 * 60 * 1000, // 30 days
+			retentionPeriod: config.retentionPeriod ?? 30 * 24 * 60 * 60 * 1000, // 30 days
 		};
 
 		const creatorUser: CollaborationUser = {
@@ -414,7 +414,7 @@ export class CollaborationEngine extends EventEmitter {
 			throw new Error('Session is not active');
 		}
 
-		if (session.users.size >= (session.config.maxUsers || 10)) {
+		if (session.users.size >= (session.config.maxUsers ?? 10)) {
 			throw new Error('Session is full');
 		}
 
@@ -531,7 +531,7 @@ export class CollaborationEngine extends EventEmitter {
 		};
 
 		// Add to operation queue for transformation
-		const queue = this.operationQueue.get(sessionId) || [];
+		const queue = this.operationQueue.get(sessionId) ?? [];
 
 		// Transform operation against pending operations
 		let transformedOperation = fullOperation;
@@ -734,7 +734,7 @@ export class CollaborationEngine extends EventEmitter {
 			throw new Error('Conflict already resolved');
 		}
 
-		const resolvedBy = userId || 'system';
+		const resolvedBy = userId ?? 'system';
 		const user = userId ? session.users.get(userId) : null;
 
 		if (user && !user.permissions.canMerge) {
@@ -750,7 +750,7 @@ export class CollaborationEngine extends EventEmitter {
 				reasoning = 'Automatically merged conflicting changes';
 				break;
 			case 'override':
-				finalResolution = resolution || '';
+				finalResolution = resolution ?? '';
 				reasoning = 'Overrode with manual resolution';
 				break;
 			case 'revert':
@@ -758,7 +758,7 @@ export class CollaborationEngine extends EventEmitter {
 				reasoning = 'Reverted to previous state';
 				break;
 			case 'manual':
-				finalResolution = resolution || '';
+				finalResolution = resolution ?? '';
 				reasoning = 'Manual resolution applied';
 				break;
 		}

@@ -6,37 +6,32 @@
 import type { SourceFile } from 'ts-morph';
 import { createASTParser, createZodExtractor, type ZodSchemaInfo } from '../ast';
 import { SchemaWalker } from '../ast/visitor';
-import type { RuleViolation } from './types';
-import {
-	checkDescription,
-	createRequireDescriptionVisitor,
-	type RequireDescriptionOptions,
-} from './builtin/require-description';
-import {
-	checkPreferMeta,
-	createPreferMetaVisitor,
-	type PreferMetaOptions,
-} from './builtin/prefer-meta';
 import {
 	checkNoAnyType,
 	createNoAnyTypeVisitor,
 	type NoAnyTypeOptions,
 } from './builtin/no-any-type';
+import { checkNoLooseObjects, type NoLooseObjectsOptions } from './builtin/no-loose-objects';
 import {
 	checkPreferDiscriminatedUnion,
 	createPreferDiscriminatedUnionVisitor,
 	type PreferDiscriminatedUnionOptions,
 } from './builtin/prefer-discriminated-union';
 import {
-	checkNoLooseObjects,
-	createNoLooseObjectsVisitor,
-	type NoLooseObjectsOptions,
-} from './builtin/no-loose-objects';
+	checkPreferMeta,
+	createPreferMetaVisitor,
+	type PreferMetaOptions,
+} from './builtin/prefer-meta';
+import {
+	checkDescription,
+	createRequireDescriptionVisitor,
+	type RequireDescriptionOptions,
+} from './builtin/require-description';
 import {
 	checkRequireRefinements,
-	createRequireRefinementsVisitor,
 	type RequireRefinementsOptions,
 } from './builtin/require-refinements';
+import type { RuleViolation } from './types';
 
 export interface RuleEngineOptions {
 	/** Enable/disable specific rules */
@@ -99,7 +94,7 @@ export class RuleEngine {
 		const violations: RuleViolation[] = [];
 
 		// Get rule configurations
-		const rules = this.options.rules || {};
+		const rules = this.options.rules ?? {};
 
 		// Run require-description rule
 		if (this.isRuleEnabled('require-description', rules)) {
@@ -170,7 +165,7 @@ export class RuleEngine {
 		rootNode: any,
 	): Promise<RuleViolation[]> {
 		const violations: RuleViolation[] = [];
-		const rules = this.options.rules || {};
+		const rules = this.options.rules ?? {};
 
 		const walker = new SchemaWalker();
 
@@ -204,10 +199,7 @@ export class RuleEngine {
 	/**
 	 * Check if a rule is enabled
 	 */
-	private isRuleEnabled(
-		ruleName: string,
-		rules: NonNullable<RuleEngineOptions['rules']>,
-	): boolean {
+	private isRuleEnabled(ruleName: string, rules: NonNullable<RuleEngineOptions['rules']>): boolean {
 		const config = rules[ruleName as keyof typeof rules];
 		if (config === undefined) return true; // Enabled by default
 		if (typeof config === 'boolean') return config;

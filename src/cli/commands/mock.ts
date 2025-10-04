@@ -123,6 +123,9 @@ export async function mockCommand(
 		} else {
 			displayMockResults(results, targetSchemas, options);
 		}
+
+		// Exit successfully
+		process.exit(0);
 	} catch (error) {
 		if (isJsonMode) {
 			console.log(

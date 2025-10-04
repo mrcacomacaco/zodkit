@@ -3,9 +3,9 @@
  * Verifies AST parsing, metadata extraction, and registry work end-to-end
  */
 
-import { describe, it, expect } from '@jest/globals';
-import { createASTParser } from '../../src/core/ast/parser';
+import { describe, expect, it } from '@jest/globals';
 import { createZodExtractor } from '../../src/core/ast/extractor';
+import { createASTParser } from '../../src/core/ast/parser';
 import { createCollector } from '../../src/core/metadata/collector';
 import { createRegistry } from '../../src/core/metadata/registry';
 
@@ -90,9 +90,9 @@ export const PostSchema = z.object({
 			const userSchema = schemas.find((s) => s.name === 'UserSchema');
 
 			expect(userSchema).toBeDefined();
-			expect(userSchema!.metadata).toBeDefined();
-			expect(userSchema!.metadata!.title).toBe('User');
-			expect(userSchema!.metadata!.category).toBe('auth');
+			expect(userSchema?.metadata).toBeDefined();
+			expect(userSchema?.metadata?.title).toBe('User');
+			expect(userSchema?.metadata?.category).toBe('auth');
 		});
 
 		it('should extract .describe() description', () => {
@@ -104,7 +104,7 @@ export const PostSchema = z.object({
 			const postSchema = schemas.find((s) => s.name === 'PostSchema');
 
 			expect(postSchema).toBeDefined();
-			expect(postSchema!.description).toBe('Blog post schema');
+			expect(postSchema?.description).toBe('Blog post schema');
 		});
 	});
 
@@ -150,7 +150,9 @@ export const PostSchema = z.object({
 			const sourceFile = parser.createSourceFile('test.ts', testSchema);
 
 			const schemas = extractor.extractSchemas(sourceFile);
-			schemas.forEach((schema) => registry.create(schema));
+			for (const schema of schemas) {
+				registry.create(schema);
+			}
 
 			const objectSchemas = registry.query({ schemaType: 'object' });
 			expect(objectSchemas.length).toBe(2);
@@ -237,9 +239,9 @@ export const PostSchema = z.object({
 
 			const userEntry = registry.readByName('UserSchema');
 			expect(userEntry).toBeDefined();
-			expect(userEntry!.metadata.title).toBe('User');
-			expect(userEntry!.metadata.category).toBe('auth');
-			expect(userEntry!.schema.schemaType).toBe('object');
+			expect(userEntry?.metadata.title).toBe('User');
+			expect(userEntry?.metadata.category).toBe('auth');
+			expect(userEntry?.schema.schemaType).toBe('object');
 		});
 	});
 });

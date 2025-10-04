@@ -230,41 +230,49 @@ export class HotReloadManager extends EventEmitter {
 
 		// Extract CommonJS requires
 		const requireRegex = /require\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
-		while ((match = requireRegex.exec(content)) !== null) {
+		match = requireRegex.exec(content);
+		while (match !== null) {
 			const requirePath = match[1];
 			if (requirePath && this.isLocalImport(requirePath)) {
 				dependencies.add(requirePath);
 			}
+			match = requireRegex.exec(content);
 		}
 
 		// Extract dynamic imports
 		const dynamicImportRegex = /import\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
-		while ((match = dynamicImportRegex.exec(content)) !== null) {
+		match = dynamicImportRegex.exec(content);
+		while (match !== null) {
 			const importPath = match[1];
 			if (importPath && this.isLocalImport(importPath)) {
 				dependencies.add(importPath);
 			}
+			match = dynamicImportRegex.exec(content);
 		}
 
 		// Extract type imports if enabled
 		if (this.config.dependencyTracking.trackTypes) {
 			const typeImportRegex = /import\s+type\s+(?:[\w\s{},*]+\s+from\s+)?['"`]([^'"`]+)['"`]/g;
-			while ((match = typeImportRegex.exec(content)) !== null) {
+			match = typeImportRegex.exec(content);
+			while (match !== null) {
 				const importPath = match[1];
 				if (importPath && this.isLocalImport(importPath)) {
 					dependencies.add(importPath);
 				}
+				match = typeImportRegex.exec(content);
 			}
 		}
 
 		// Extract re-exports if enabled
 		if (this.config.dependencyTracking.trackReExports) {
 			const reExportRegex = /export\s+(?:\*|\{[^}]+\})\s+from\s+['"`]([^'"`]+)['"`]/g;
-			while ((match = reExportRegex.exec(content)) !== null) {
+			match = reExportRegex.exec(content);
+			while (match !== null) {
 				const importPath = match[1];
 				if (importPath && this.isLocalImport(importPath)) {
 					dependencies.add(importPath);
 				}
+				match = reExportRegex.exec(content);
 			}
 		}
 
@@ -329,7 +337,12 @@ export class HotReloadManager extends EventEmitter {
 			},
 		};
 
-		this.watcher = watch(this.config.patterns, watchOptions);
+		try {
+			this.watcher = watch(this.config.patterns, watchOptions);
+		} catch (error) {
+			this.logger.error('Failed to initialize file watcher', error);
+			throw new Error('Failed to initialize file watcher');
+		}
 
 		this.watcher
 			.on('change', (path) => this.handleFileChange(path, 'change'))
@@ -578,7 +591,9 @@ export class HotReloadManager extends EventEmitter {
 	async clearCache(): Promise<void> {
 		this.dependencyGraph.clear();
 		this.reloadQueue.clear();
-		this.reloadDebounceTimers.forEach((timer) => clearTimeout(timer));
+		for (const timer of this.reloadDebounceTimers.values()) {
+			clearTimeout(timer);
+		}
 		this.reloadDebounceTimers.clear();
 
 		this.logger.debug('Hot reload cache cleared');

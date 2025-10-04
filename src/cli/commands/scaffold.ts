@@ -13,7 +13,6 @@ import {
 	type PatternDetector,
 	ScaffoldEngine,
 } from '../../core/schema-generation';
-import { ScaffoldDashboardUI } from '../ui/dashboard';
 
 interface ScaffoldOptions {
 	output?: string;
@@ -87,6 +86,7 @@ export async function scaffoldCommand(
 
 		// Launch interactive TUI if requested
 		if (options.interactive) {
+			const { ScaffoldDashboardUI } = await import('../ui/dashboard');
 			const dashboard = new ScaffoldDashboardUI(engine) as any;
 			await dashboard.start();
 		} else if (options.watch) {
@@ -94,6 +94,9 @@ export async function scaffoldCommand(
 		} else {
 			await runSingleGeneration(engine, inputFile, options);
 		}
+
+		// Exit successfully
+		process.exit(0);
 	} catch (error) {
 		if (options.json) {
 			console.log(
@@ -119,21 +122,29 @@ async function runSingleGeneration(
 	options: ScaffoldOptions,
 ): Promise<void> {
 	const startTime = Date.now();
-	// Generate schemas (cast engine to access scaffoldFile method)
-	const schemas = (await (engine as any).scaffoldFile(inputFile)) as Map<string, GeneratedSchema>;
 
-	if (schemas.size === 0) {
+	// Use the actual SchemaGenerator API
+	const result = await engine.generate(inputFile, {
+		type: 'scaffold',
+		format: 'typescript',
+		patterns: options.patterns !== false,
+		strict: false,
+		verbose: !options.quiet,
+	});
+
+	if (!result.success || !result.output) {
 		if (!options.quiet && !options.json) {
 			console.log(pc.yellow('⚠ No schemas found in the input file'));
+			if (result.warnings.length > 0) {
+				result.warnings.forEach(w => console.log(pc.gray(`  ${w}`)));
+			}
 		}
 		return;
 	}
 
 	// Generate output
 	const outputFile = options.output || inputFile.replace(/\.ts$/, '.schema.ts');
-	const imports = (await (engine as any).generateImports(schemas)) as string;
-	const schemaCode = generateSchemaCode(schemas);
-	const fullContent = imports + schemaCode;
+	const fullContent = result.output as string;
 
 	// Output results
 	if (options.json) {
@@ -141,32 +152,22 @@ async function runSingleGeneration(
 			success: true,
 			inputFile,
 			outputFile: options.dryRun ? null : outputFile,
-			schemas: Array.from(schemas.entries()).map(([name, schema]: [any, any]) => ({
-				name,
-				type: (schema as any).sourceType,
-				hasGenerics: (schema as any).hasGenerics,
-				dependencies: Array.from((schema as any).dependencies || []),
-				refinements: (schema as any).refinements,
-				jsDoc: (schema as any).jsDoc,
-			})),
-			stats: {
-				total: schemas.size,
-				interfaces: Array.from(schemas.values()).filter((s: any) => s.sourceType === 'interface')
-					.length,
-				types: Array.from(schemas.values()).filter((s: any) => s.sourceType === 'type').length,
-				enums: Array.from(schemas.values()).filter((s: any) => s.sourceType === 'enum').length,
-				classes: Array.from(schemas.values()).filter((s: any) => s.sourceType === 'class').length,
-				withPatterns: Array.from(schemas.values()).filter(
-					(s: any) => (s as any).refinements?.length > 0,
-				).length,
-			},
+			metadata: result.metadata,
+			warnings: result.warnings,
 			duration: Date.now() - startTime,
 		};
 		console.log(JSON.stringify(output, null, 2));
 	} else {
 		// Display results
 		if (!options.quiet) {
-			displayResults(schemas, inputFile, outputFile);
+			console.log(pc.green(`\n✓ Generated schemas from ${inputFile}`));
+			console.log(pc.gray(`  Output: ${outputFile}`));
+			console.log(pc.gray(`  Lines: ${result.metadata.linesGenerated}`));
+			console.log(pc.gray(`  Time: ${result.metadata.timeElapsed}ms`));
+			if (result.warnings.length > 0) {
+				console.log(pc.yellow(`\n⚠ Warnings:`));
+				result.warnings.forEach(w => console.log(pc.gray(`  ${w}`)));
+			}
 		}
 
 		// Write to file if not dry run

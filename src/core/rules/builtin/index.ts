@@ -3,10 +3,10 @@
  * @module BuiltinRules
  */
 
-export * from './require-description';
-export * from './prefer-meta';
 export * from './no-any-type';
 export * from './prefer-discriminated-union';
+export * from './prefer-meta';
+export * from './require-description';
 
 /**
  * All built-in rules registry

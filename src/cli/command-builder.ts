@@ -163,6 +163,7 @@ export const CommandConfigs = {
 
 	profile: () =>
 		createCommand('profile', 'Profile schema performance', 'analysis')
+			.argument('[target]', 'specific schema or pattern to profile')
 			.option('--runtime', 'enable runtime profiling')
 			.option('--report', 'generate performance report'),
 
@@ -175,6 +176,8 @@ export const CommandConfigs = {
 	generate: () =>
 		createCommand('generate', 'Generate schemas from data sources', 'generation')
 			.option('--from <source>', 'source type: json, typescript, openapi', 'json')
+			.option('--input <path>', 'input file or directory')
+			.option('--dest <path>', 'output file or directory (alias for --output)')
 			.option('--name <name>', 'schema name prefix'),
 
 	mock: () =>
@@ -250,7 +253,10 @@ export const CommandConfigs = {
 		createCommand('create', 'Interactive schema builder with step-by-step prompts', 'generation')
 			.option('-o, --output <path>', 'output file path')
 			.option('--name <name>', 'schema name')
-			.option('--template <template>', 'use a predefined template (user, product, post, comment, address, apiResponse, pagination)')
+			.option(
+				'--template <template>',
+				'use a predefined template (user, product, post, comment, address, apiResponse, pagination)',
+			)
 			.option('--no-interactive', 'disable interactive mode'),
 
 	fix: () =>

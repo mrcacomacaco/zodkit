@@ -14,7 +14,13 @@ import {
 } from '../../src/core/hot-reload';
 
 // Mock dependencies
-jest.mock('chokidar');
+jest.mock('chokidar', () => ({
+	watch: jest.fn(() => {
+		const mockWatcher = new EventEmitter();
+		(mockWatcher as any).close = jest.fn().mockResolvedValue(undefined);
+		return mockWatcher;
+	}),
+}));
 jest.mock('fs/promises');
 
 describe('HotReloadManager', () => {

@@ -144,9 +144,9 @@ export class StreamingProcessor extends EventEmitter {
 	constructor(options: StreamingOptions = {}) {
 		super();
 		this.options = {
-			chunkSize: options.chunkSize || 64 * 1024, // 64KB chunks
-			maxConcurrentStreams: options.maxConcurrentStreams || 5,
-			memoryLimit: options.memoryLimit || 256 * 1024 * 1024, // 256MB
+			chunkSize: options.chunkSize ?? 64 * 1024, // 64KB chunks
+			maxConcurrentStreams: options.maxConcurrentStreams ?? 5,
+			memoryLimit: options.memoryLimit ?? 256 * 1024 * 1024, // 256MB
 			enableGC: options.enableGC ?? true,
 		};
 
@@ -245,7 +245,7 @@ export class StreamingProcessor extends EventEmitter {
 
 								// Process complete lines to avoid cutting schemas in half
 								const lines = buffer.split('\n');
-								buffer = lines.pop() || ''; // Keep incomplete line in buffer
+								buffer = lines.pop() ?? ''; // Keep incomplete line in buffer
 
 								if (lines.length > 0) {
 									const chunkContent = `${lines.join('\n')}\n`;
@@ -383,8 +383,8 @@ export class MemoryOptimizer extends EventEmitter {
 		super();
 		this.options = {
 			autoGC: options.autoGC ?? true,
-			gcThreshold: options.gcThreshold || 100 * 1024 * 1024, // 100MB
-			maxHeapSize: options.maxHeapSize || 512 * 1024 * 1024, // 512MB
+			gcThreshold: options.gcThreshold ?? 100 * 1024 * 1024, // 100MB
+			maxHeapSize: options.maxHeapSize ?? 512 * 1024 * 1024, // 512MB
 			enableProfiling: options.enableProfiling ?? false,
 		};
 
@@ -491,7 +491,7 @@ export class MemoryOptimizer extends EventEmitter {
 		processor: (item: T) => Promise<R> | R,
 		options: { batchSize?: number } = {},
 	): (items: T[]) => Promise<R[]> {
-		const batchSize = options.batchSize || 50;
+		const batchSize = options.batchSize ?? 50;
 
 		return async (items: T[]): Promise<R[]> => {
 			const results: R[] = [];

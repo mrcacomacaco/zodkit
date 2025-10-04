@@ -3,7 +3,7 @@
  * @module SchemaDiff
  */
 
-import { z } from 'zod';
+import type { z } from 'zod';
 
 // === TYPES ===
 
@@ -82,7 +82,7 @@ export interface DiffOptions {
 // === SCHEMA DIFF ENGINE ===
 
 export class SchemaDiff {
-	private options: Required<DiffOptions>;
+	private readonly options: Required<DiffOptions>;
 
 	constructor(options: DiffOptions = {}) {
 		this.options = {
@@ -162,16 +162,40 @@ export class SchemaDiff {
 		// Compare based on type
 		switch (oldType) {
 			case 'ZodObject':
-				this.compareObjects(oldSchema as z.ZodObject<any>, newSchema as z.ZodObject<any>, path, changes, breakingChanges);
+				this.compareObjects(
+					oldSchema as z.ZodObject<any>,
+					newSchema as z.ZodObject<any>,
+					path,
+					changes,
+					breakingChanges,
+				);
 				break;
 			case 'ZodArray':
-				this.compareArrays(oldSchema as z.ZodArray<any>, newSchema as z.ZodArray<any>, path, changes, breakingChanges);
+				this.compareArrays(
+					oldSchema as z.ZodArray<any>,
+					newSchema as z.ZodArray<any>,
+					path,
+					changes,
+					breakingChanges,
+				);
 				break;
 			case 'ZodUnion':
-				this.compareUnions(oldSchema as z.ZodUnion<any>, newSchema as z.ZodUnion<any>, path, changes, breakingChanges);
+				this.compareUnions(
+					oldSchema as z.ZodUnion<any>,
+					newSchema as z.ZodUnion<any>,
+					path,
+					changes,
+					breakingChanges,
+				);
 				break;
 			case 'ZodEnum':
-				this.compareEnums(oldSchema as z.ZodEnum<any>, newSchema as z.ZodEnum<any>, path, changes, breakingChanges);
+				this.compareEnums(
+					oldSchema as z.ZodEnum<any>,
+					newSchema as z.ZodEnum<any>,
+					path,
+					changes,
+					breakingChanges,
+				);
 				break;
 			case 'ZodString':
 			case 'ZodNumber':
@@ -179,10 +203,22 @@ export class SchemaDiff {
 				this.comparePrimitives(oldSchema, newSchema, path, changes, breakingChanges);
 				break;
 			case 'ZodOptional':
-				this.compareOptionals(oldSchema as z.ZodOptional<any>, newSchema as z.ZodOptional<any>, path, changes, breakingChanges);
+				this.compareOptionals(
+					oldSchema as z.ZodOptional<any>,
+					newSchema as z.ZodOptional<any>,
+					path,
+					changes,
+					breakingChanges,
+				);
 				break;
 			case 'ZodNullable':
-				this.compareNullables(oldSchema as z.ZodNullable<any>, newSchema as z.ZodNullable<any>, path, changes, breakingChanges);
+				this.compareNullables(
+					oldSchema as z.ZodNullable<any>,
+					newSchema as z.ZodNullable<any>,
+					path,
+					changes,
+					breakingChanges,
+				);
 				break;
 		}
 	}
@@ -234,7 +270,7 @@ export class SchemaDiff {
 		for (const key of newKeys) {
 			if (!oldKeys.has(key)) {
 				const fieldPath = `${path}.${key}`;
-				const newField = newSchema;
+				const _newField = newSchema;
 				const isOptional = this.isOptionalField(newShape[key]);
 
 				if (!isOptional) {
@@ -501,7 +537,10 @@ export class SchemaDiff {
 	/**
 	 * Calculate summary statistics
 	 */
-	private calculateSummary(changes: SchemaChange[], breakingChanges: BreakingChange[]): DiffSummary {
+	private calculateSummary(
+		changes: SchemaChange[],
+		breakingChanges: BreakingChange[],
+	): DiffSummary {
 		const breaking = changes.filter((c) => c.breaking).length;
 		const nonBreaking = changes.length - breaking;
 
@@ -523,7 +562,10 @@ export class SchemaDiff {
 	/**
 	 * Generate migration guide from changes
 	 */
-	private generateMigrationGuide(changes: SchemaChange[], breakingChanges: BreakingChange[]): string {
+	private generateMigrationGuide(
+		changes: SchemaChange[],
+		breakingChanges: BreakingChange[],
+	): string {
 		let guide = '# Schema Migration Guide\n\n';
 
 		if (breakingChanges.length === 0) {

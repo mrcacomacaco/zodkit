@@ -5,9 +5,14 @@
  * Provides TypeScript AST parsing using ts-morph for schema discovery and analysis
  */
 
-import { Project, type ProjectOptions, type SourceFile, SyntaxKind, type Node } from 'ts-morph';
 import * as path from 'node:path';
-import * as fs from 'node:fs';
+import {
+	type Node,
+	Project,
+	type ProjectOptions,
+	type SourceFile,
+	type SyntaxKind,
+} from 'ts-morph';
 
 // === TYPES ===
 
@@ -54,7 +59,7 @@ export class ASTParser {
 		this.project = new Project({
 			tsConfigFilePath: options.tsConfigFilePath,
 			skipAddingFilesFromTsConfig: options.skipAddingFilesFromTsConfig ?? false,
-			compilerOptions: options.compilerOptions || {
+			compilerOptions: options.compilerOptions ?? {
 				strict: true,
 				target: 99, // ESNext
 				module: 99, // ESNext
@@ -70,8 +75,9 @@ export class ASTParser {
 		const absolutePath = path.resolve(filePath);
 
 		// Check cache
-		if (this.fileCache.has(absolutePath)) {
-			return this.fileCache.get(absolutePath)!.sourceFile;
+		const cached = this.fileCache.get(absolutePath);
+		if (cached) {
+			return cached.sourceFile;
 		}
 
 		// Add to project
@@ -105,7 +111,7 @@ export class ASTParser {
 	getSourceFile(filePath: string): SourceFile | undefined {
 		const absolutePath = path.resolve(filePath);
 		const cached = this.fileCache.get(absolutePath);
-		return cached?.sourceFile || this.project.getSourceFile(absolutePath);
+		return cached?.sourceFile ?? this.project.getSourceFile(absolutePath);
 	}
 
 	/**
@@ -123,9 +129,7 @@ export class ASTParser {
 
 		sourceFile.getImportDeclarations().forEach((importDecl) => {
 			const moduleSpecifier = importDecl.getModuleSpecifierValue();
-			const namedImports = importDecl
-				.getNamedImports()
-				.map((named) => named.getName());
+			const namedImports = importDecl.getNamedImports().map((named) => named.getName());
 			const defaultImport = importDecl.getDefaultImport()?.getText();
 			const namespaceImport = importDecl.getNamespaceImport()?.getText();
 			const isTypeOnly = importDecl.isTypeOnly();
@@ -165,7 +169,7 @@ export class ASTParser {
 		// Function exports
 		sourceFile.getFunctions().forEach((func) => {
 			if (func.isExported()) {
-				const name = func.getName() || 'default';
+				const name = func.getName() ?? 'default';
 				exports.push({
 					name,
 					kind: 'function',
@@ -178,7 +182,7 @@ export class ASTParser {
 		// Class exports
 		sourceFile.getClasses().forEach((cls) => {
 			if (cls.isExported()) {
-				const name = cls.getName() || 'default';
+				const name = cls.getName() ?? 'default';
 				exports.push({
 					name,
 					kind: 'class',

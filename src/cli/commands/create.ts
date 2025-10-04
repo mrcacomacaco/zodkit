@@ -10,15 +10,19 @@
  */
 
 import { existsSync, writeFileSync } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { confirm, input, Separator, select } from '@inquirer/prompts';
 import * as pc from 'picocolors';
-import { select, input, confirm, Separator } from '@inquirer/prompts';
+import { CreateOptionsSchema, validateCommandOptions } from '../../core/command-validation';
+import { createErrorHandler } from '../../core/error-handler';
+import { printSchemaPreview, SchemaPreviewValidator } from '../../core/schema-preview';
 
 export interface CreateOptions {
 	output?: string;
 	name?: string;
 	interactive?: boolean;
 	template?: string;
+	format?: 'text' | 'json';
 }
 
 interface SchemaField {
@@ -70,15 +74,78 @@ const SCHEMA_TEMPLATES: Record<
 		schema: {
 			description: 'User profile schema',
 			fields: [
-				{ name: 'id', type: 'uuid', optional: false, nullable: false, validations: [], description: 'Unique user ID' },
-				{ name: 'email', type: 'email', optional: false, nullable: false, validations: [], description: 'Email address' },
-				{ name: 'username', type: 'string', optional: false, nullable: false, validations: ['min(3)', 'max(20)'], description: 'Username' },
-				{ name: 'password', type: 'string', optional: false, nullable: false, validations: ['min(8)', 'max(100)'], description: 'Password hash' },
-				{ name: 'firstName', type: 'string', optional: true, nullable: false, validations: [], description: 'First name' },
-				{ name: 'lastName', type: 'string', optional: true, nullable: false, validations: [], description: 'Last name' },
-				{ name: 'avatar', type: 'url', optional: true, nullable: false, validations: [], description: 'Avatar URL' },
-				{ name: 'createdAt', type: 'date', optional: false, nullable: false, validations: [], description: 'Account creation date' },
-				{ name: 'updatedAt', type: 'date', optional: false, nullable: false, validations: [], description: 'Last update date' },
+				{
+					name: 'id',
+					type: 'uuid',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Unique user ID',
+				},
+				{
+					name: 'email',
+					type: 'email',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Email address',
+				},
+				{
+					name: 'username',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: ['min(3)', 'max(20)'],
+					description: 'Username',
+				},
+				{
+					name: 'password',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: ['min(8)', 'max(100)'],
+					description: 'Password hash',
+				},
+				{
+					name: 'firstName',
+					type: 'string',
+					optional: true,
+					nullable: false,
+					validations: [],
+					description: 'First name',
+				},
+				{
+					name: 'lastName',
+					type: 'string',
+					optional: true,
+					nullable: false,
+					validations: [],
+					description: 'Last name',
+				},
+				{
+					name: 'avatar',
+					type: 'url',
+					optional: true,
+					nullable: false,
+					validations: [],
+					description: 'Avatar URL',
+				},
+				{
+					name: 'createdAt',
+					type: 'date',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Account creation date',
+				},
+				{
+					name: 'updatedAt',
+					type: 'date',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Last update date',
+				},
 			],
 		},
 	},
@@ -87,15 +154,78 @@ const SCHEMA_TEMPLATES: Record<
 		schema: {
 			description: 'Product schema for e-commerce',
 			fields: [
-				{ name: 'id', type: 'uuid', optional: false, nullable: false, validations: [], description: 'Product ID' },
-				{ name: 'name', type: 'string', optional: false, nullable: false, validations: ['min(1)', 'max(200)'], description: 'Product name' },
-				{ name: 'description', type: 'string', optional: false, nullable: false, validations: ['max(2000)'], description: 'Product description' },
-				{ name: 'price', type: 'number', optional: false, nullable: false, validations: ['positive()', 'multipleOf(0.01)'], description: 'Price in dollars' },
-				{ name: 'category', type: 'string', optional: false, nullable: false, validations: [], description: 'Product category' },
-				{ name: 'tags', type: 'array', optional: true, nullable: false, validations: [], description: 'Product tags' },
-				{ name: 'inStock', type: 'boolean', optional: false, nullable: false, validations: [], description: 'Stock availability' },
-				{ name: 'stockCount', type: 'number', optional: false, nullable: false, validations: ['int()', 'nonnegative()'], description: 'Stock quantity' },
-				{ name: 'imageUrl', type: 'url', optional: true, nullable: false, validations: [], description: 'Product image' },
+				{
+					name: 'id',
+					type: 'uuid',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Product ID',
+				},
+				{
+					name: 'name',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: ['min(1)', 'max(200)'],
+					description: 'Product name',
+				},
+				{
+					name: 'description',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: ['max(2000)'],
+					description: 'Product description',
+				},
+				{
+					name: 'price',
+					type: 'number',
+					optional: false,
+					nullable: false,
+					validations: ['positive()', 'multipleOf(0.01)'],
+					description: 'Price in dollars',
+				},
+				{
+					name: 'category',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Product category',
+				},
+				{
+					name: 'tags',
+					type: 'array',
+					optional: true,
+					nullable: false,
+					validations: [],
+					description: 'Product tags',
+				},
+				{
+					name: 'inStock',
+					type: 'boolean',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Stock availability',
+				},
+				{
+					name: 'stockCount',
+					type: 'number',
+					optional: false,
+					nullable: false,
+					validations: ['int()', 'nonnegative()'],
+					description: 'Stock quantity',
+				},
+				{
+					name: 'imageUrl',
+					type: 'url',
+					optional: true,
+					nullable: false,
+					validations: [],
+					description: 'Product image',
+				},
 			],
 		},
 	},
@@ -104,17 +234,94 @@ const SCHEMA_TEMPLATES: Record<
 		schema: {
 			description: 'Blog post schema',
 			fields: [
-				{ name: 'id', type: 'uuid', optional: false, nullable: false, validations: [], description: 'Post ID' },
-				{ name: 'title', type: 'string', optional: false, nullable: false, validations: ['min(1)', 'max(200)'], description: 'Post title' },
-				{ name: 'slug', type: 'string', optional: false, nullable: false, validations: ['min(1)', 'max(200)'], description: 'URL slug' },
-				{ name: 'content', type: 'string', optional: false, nullable: false, validations: [], description: 'Post content' },
-				{ name: 'excerpt', type: 'string', optional: true, nullable: false, validations: ['max(500)'], description: 'Post excerpt' },
-				{ name: 'authorId', type: 'uuid', optional: false, nullable: false, validations: [], description: 'Author ID' },
-				{ name: 'published', type: 'boolean', optional: false, nullable: false, validations: [], description: 'Published status' },
-				{ name: 'publishedAt', type: 'date', optional: true, nullable: false, validations: [], description: 'Publication date' },
-				{ name: 'tags', type: 'array', optional: true, nullable: false, validations: [], description: 'Post tags' },
-				{ name: 'createdAt', type: 'date', optional: false, nullable: false, validations: [], description: 'Creation date' },
-				{ name: 'updatedAt', type: 'date', optional: false, nullable: false, validations: [], description: 'Update date' },
+				{
+					name: 'id',
+					type: 'uuid',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Post ID',
+				},
+				{
+					name: 'title',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: ['min(1)', 'max(200)'],
+					description: 'Post title',
+				},
+				{
+					name: 'slug',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: ['min(1)', 'max(200)'],
+					description: 'URL slug',
+				},
+				{
+					name: 'content',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Post content',
+				},
+				{
+					name: 'excerpt',
+					type: 'string',
+					optional: true,
+					nullable: false,
+					validations: ['max(500)'],
+					description: 'Post excerpt',
+				},
+				{
+					name: 'authorId',
+					type: 'uuid',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Author ID',
+				},
+				{
+					name: 'published',
+					type: 'boolean',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Published status',
+				},
+				{
+					name: 'publishedAt',
+					type: 'date',
+					optional: true,
+					nullable: false,
+					validations: [],
+					description: 'Publication date',
+				},
+				{
+					name: 'tags',
+					type: 'array',
+					optional: true,
+					nullable: false,
+					validations: [],
+					description: 'Post tags',
+				},
+				{
+					name: 'createdAt',
+					type: 'date',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Creation date',
+				},
+				{
+					name: 'updatedAt',
+					type: 'date',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Update date',
+				},
 			],
 		},
 	},
@@ -123,12 +330,54 @@ const SCHEMA_TEMPLATES: Record<
 		schema: {
 			description: 'Comment schema',
 			fields: [
-				{ name: 'id', type: 'uuid', optional: false, nullable: false, validations: [], description: 'Comment ID' },
-				{ name: 'postId', type: 'uuid', optional: false, nullable: false, validations: [], description: 'Post ID' },
-				{ name: 'authorId', type: 'uuid', optional: false, nullable: false, validations: [], description: 'Author ID' },
-				{ name: 'content', type: 'string', optional: false, nullable: false, validations: ['min(1)', 'max(2000)'], description: 'Comment text' },
-				{ name: 'parentId', type: 'uuid', optional: true, nullable: false, validations: [], description: 'Parent comment ID' },
-				{ name: 'createdAt', type: 'date', optional: false, nullable: false, validations: [], description: 'Creation date' },
+				{
+					name: 'id',
+					type: 'uuid',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Comment ID',
+				},
+				{
+					name: 'postId',
+					type: 'uuid',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Post ID',
+				},
+				{
+					name: 'authorId',
+					type: 'uuid',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Author ID',
+				},
+				{
+					name: 'content',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: ['min(1)', 'max(2000)'],
+					description: 'Comment text',
+				},
+				{
+					name: 'parentId',
+					type: 'uuid',
+					optional: true,
+					nullable: false,
+					validations: [],
+					description: 'Parent comment ID',
+				},
+				{
+					name: 'createdAt',
+					type: 'date',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Creation date',
+				},
 			],
 		},
 	},
@@ -137,11 +386,46 @@ const SCHEMA_TEMPLATES: Record<
 		schema: {
 			description: 'Physical address schema',
 			fields: [
-				{ name: 'street', type: 'string', optional: false, nullable: false, validations: ['min(1)', 'max(200)'], description: 'Street address' },
-				{ name: 'city', type: 'string', optional: false, nullable: false, validations: ['min(1)', 'max(100)'], description: 'City' },
-				{ name: 'state', type: 'string', optional: false, nullable: false, validations: ['length(2)'], description: 'State code' },
-				{ name: 'zipCode', type: 'string', optional: false, nullable: false, validations: ['regex(^\\d{5}(-\\d{4})?$)'], description: 'ZIP code' },
-				{ name: 'country', type: 'string', optional: false, nullable: false, validations: ['length(2)'], description: 'Country code' },
+				{
+					name: 'street',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: ['min(1)', 'max(200)'],
+					description: 'Street address',
+				},
+				{
+					name: 'city',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: ['min(1)', 'max(100)'],
+					description: 'City',
+				},
+				{
+					name: 'state',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: ['length(2)'],
+					description: 'State code',
+				},
+				{
+					name: 'zipCode',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: ['regex(^\\d{5}(-\\d{4})?$)'],
+					description: 'ZIP code',
+				},
+				{
+					name: 'country',
+					type: 'string',
+					optional: false,
+					nullable: false,
+					validations: ['length(2)'],
+					description: 'Country code',
+				},
 			],
 		},
 	},
@@ -150,11 +434,46 @@ const SCHEMA_TEMPLATES: Record<
 		schema: {
 			description: 'Standard API response wrapper',
 			fields: [
-				{ name: 'success', type: 'boolean', optional: false, nullable: false, validations: [], description: 'Request success status' },
-				{ name: 'data', type: 'unknown', optional: true, nullable: false, validations: [], description: 'Response data' },
-				{ name: 'error', type: 'string', optional: true, nullable: false, validations: [], description: 'Error message' },
-				{ name: 'code', type: 'number', optional: false, nullable: false, validations: ['int()', 'min(100)', 'max(599)'], description: 'HTTP status code' },
-				{ name: 'timestamp', type: 'date', optional: false, nullable: false, validations: [], description: 'Response timestamp' },
+				{
+					name: 'success',
+					type: 'boolean',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Request success status',
+				},
+				{
+					name: 'data',
+					type: 'unknown',
+					optional: true,
+					nullable: false,
+					validations: [],
+					description: 'Response data',
+				},
+				{
+					name: 'error',
+					type: 'string',
+					optional: true,
+					nullable: false,
+					validations: [],
+					description: 'Error message',
+				},
+				{
+					name: 'code',
+					type: 'number',
+					optional: false,
+					nullable: false,
+					validations: ['int()', 'min(100)', 'max(599)'],
+					description: 'HTTP status code',
+				},
+				{
+					name: 'timestamp',
+					type: 'date',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Response timestamp',
+				},
 			],
 		},
 	},
@@ -163,12 +482,54 @@ const SCHEMA_TEMPLATES: Record<
 		schema: {
 			description: 'Pagination metadata schema',
 			fields: [
-				{ name: 'page', type: 'number', optional: false, nullable: false, validations: ['int()', 'positive()'], description: 'Current page' },
-				{ name: 'pageSize', type: 'number', optional: false, nullable: false, validations: ['int()', 'positive()'], description: 'Items per page' },
-				{ name: 'totalPages', type: 'number', optional: false, nullable: false, validations: ['int()', 'nonnegative()'], description: 'Total pages' },
-				{ name: 'totalItems', type: 'number', optional: false, nullable: false, validations: ['int()', 'nonnegative()'], description: 'Total items' },
-				{ name: 'hasNext', type: 'boolean', optional: false, nullable: false, validations: [], description: 'Has next page' },
-				{ name: 'hasPrevious', type: 'boolean', optional: false, nullable: false, validations: [], description: 'Has previous page' },
+				{
+					name: 'page',
+					type: 'number',
+					optional: false,
+					nullable: false,
+					validations: ['int()', 'positive()'],
+					description: 'Current page',
+				},
+				{
+					name: 'pageSize',
+					type: 'number',
+					optional: false,
+					nullable: false,
+					validations: ['int()', 'positive()'],
+					description: 'Items per page',
+				},
+				{
+					name: 'totalPages',
+					type: 'number',
+					optional: false,
+					nullable: false,
+					validations: ['int()', 'nonnegative()'],
+					description: 'Total pages',
+				},
+				{
+					name: 'totalItems',
+					type: 'number',
+					optional: false,
+					nullable: false,
+					validations: ['int()', 'nonnegative()'],
+					description: 'Total items',
+				},
+				{
+					name: 'hasNext',
+					type: 'boolean',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Has next page',
+				},
+				{
+					name: 'hasPrevious',
+					type: 'boolean',
+					optional: false,
+					nullable: false,
+					validations: [],
+					description: 'Has previous page',
+				},
 			],
 		},
 	},
@@ -215,11 +576,17 @@ const VALIDATIONS_BY_TYPE: Record<string, Array<{ name: string; value: string }>
  */
 export async function createCommand(options: CreateOptions = {}): Promise<void> {
 	try {
+		// Validate inputs with Zod
+		const validatedOptions = validateCommandOptions(CreateOptionsSchema, options, 'create');
+
+		// Initialize real-time validator
+		const validator = new SchemaPreviewValidator();
+
 		console.log(pc.blue('✨ zodkit create - Interactive Schema Builder\n'));
 
 		// Check if template is provided via CLI option
 		let useTemplateValue: 'template' | 'scratch' = 'scratch';
-		if (options.template) {
+		if (validatedOptions.template) {
 			useTemplateValue = 'template';
 		} else {
 			// Ask if user wants to use a template
@@ -237,8 +604,8 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 		if (useTemplateValue === 'template') {
 			// Get template key (from option or interactive selection)
 			let templateKey: string;
-			if (options.template) {
-				templateKey = options.template;
+			if (validatedOptions.template) {
+				templateKey = validatedOptions.template;
 				if (!SCHEMA_TEMPLATES[templateKey]) {
 					console.error(pc.red(`\n❌ Unknown template: ${templateKey}`));
 					console.log(pc.gray(`Available templates: ${Object.keys(SCHEMA_TEMPLATES).join(', ')}`));
@@ -258,7 +625,7 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 
 			// Get schema name
 			const schemaName =
-				options.name ||
+				validatedOptions.name ??
 				(await input({
 					message: 'Schema name (PascalCase):',
 					default: `${templateKey.charAt(0).toUpperCase() + templateKey.slice(1)}Schema`,
@@ -279,6 +646,11 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 
 			console.log(pc.green(`\n✓ Template loaded with ${schema.fields.length} fields`));
 			console.log(pc.gray('You can customize or add more fields next.\n'));
+
+			// Show initial template preview
+			const templateValidation = validator.validateSchema(schema);
+			const templateCode = generateSchemaCode(schema);
+			printSchemaPreview(schema, templateValidation, templateCode);
 
 			// Ask if user wants to customize
 			const customize = await confirm({
@@ -308,7 +680,7 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 			// Start from scratch
 			// Get schema name
 			const schemaName =
-				options.name ||
+				validatedOptions.name ??
 				(await input({
 					message: 'Schema name (PascalCase):',
 					default: 'MySchema',
@@ -328,14 +700,16 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 
 			schema = {
 				name: schemaName,
-				description: schemaDescription || undefined,
+				description: schemaDescription ?? undefined,
 				fields: [],
 			};
 
 			// Add fields interactively
 			let addingFields = true;
 			while (addingFields) {
-				console.log(pc.cyan(`\n${schema.fields.length > 0 ? 'Add another field?' : 'Add first field'}`));
+				console.log(
+					pc.cyan(`\n${schema.fields.length > 0 ? 'Add another field?' : 'Add first field'}`),
+				);
 
 				const shouldAddField =
 					schema.fields.length === 0 ||
@@ -352,15 +726,27 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 				const field = await buildField();
 				schema.fields.push(field);
 
-				// Show current progress
-				console.log(pc.gray('\nCurrent fields:'));
-				schema.fields.forEach((f, i) => {
-					console.log(
-						pc.gray(
-							`  ${i + 1}. ${f.name}: ${f.type}${f.optional ? '?' : ''}${f.description ? ` // ${f.description}` : ''}`,
-						),
-					);
-				});
+				// Real-time validation and preview
+				const validation = validator.validateSchema(schema);
+				const currentCode = generateSchemaCode(schema);
+
+				// Show live preview after each field
+				console.log('\n');
+				printSchemaPreview(schema, validation, currentCode);
+
+				// If there are errors, ask if user wants to fix
+				if (!validation.valid) {
+					const shouldContinue = await confirm({
+						message: 'Schema has errors. Continue anyway?',
+						default: false,
+					});
+
+					if (!shouldContinue) {
+						// Remove the last field
+						schema.fields.pop();
+						console.log(pc.yellow('\n⚠️  Last field removed.'));
+					}
+				}
 			}
 		}
 
@@ -368,14 +754,47 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 			console.log(pc.yellow('\n⚠️  No fields added. Creating empty object schema.'));
 		}
 
-		// Generate code
+		// Final validation and preview
+		const finalValidation = validator.validateSchema(schema);
 		const code = generateSchemaCode(schema);
 
-		// Show preview
-		console.log(pc.cyan('\n📋 Generated Schema:\n'));
-		console.log(pc.gray('─'.repeat(60)));
-		console.log(code);
-		console.log(pc.gray('─'.repeat(60)));
+		// JSON output mode
+		if (validatedOptions.format === 'json') {
+			const jsonOutput = {
+				schema: {
+					name: schema.name,
+					description: schema.description,
+					fields: schema.fields,
+				},
+				validation: finalValidation,
+				code,
+			};
+
+			if (validatedOptions.output) {
+				writeFileSync(resolve(validatedOptions.output), JSON.stringify(jsonOutput, null, 2));
+				console.log(pc.green(`✅ Schema saved to ${validatedOptions.output}`));
+			} else {
+				console.log(JSON.stringify(jsonOutput, null, 2));
+			}
+			return;
+		}
+
+		// Show final preview
+		console.log('\n');
+		printSchemaPreview(schema, finalValidation, code);
+
+		// If final schema is invalid, confirm before saving
+		if (!finalValidation.valid) {
+			const shouldProceed = await confirm({
+				message: 'Schema has validation errors. Proceed with saving?',
+				default: false,
+			});
+
+			if (!shouldProceed) {
+				console.log(pc.yellow('\n⚠️  Schema creation cancelled.'));
+				return;
+			}
+		}
 
 		// Save to file
 		const shouldSave = await confirm({
@@ -385,7 +804,7 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 
 		if (shouldSave) {
 			const outputPath =
-				options.output ||
+				validatedOptions.output ??
 				(await input({
 					message: 'Output file path:',
 					default: `./schemas/${schema.name.toLowerCase()}.schema.ts`,
@@ -425,16 +844,18 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 			console.log(pc.yellow('\n⚠️  Schema not saved. Copy the code above if needed.'));
 		}
 	} catch (error) {
+		// Handle user cancellation gracefully
 		if (error instanceof Error && error.message.includes('User force closed')) {
 			console.log(pc.yellow('\n\n⚠️  Cancelled by user.'));
 			process.exit(0);
 		}
 
-		console.error(
-			pc.red('\n❌ Create command failed:'),
-			error instanceof Error ? error.message : String(error),
-		);
-		process.exit(1);
+		// Use standardized error handler for all other errors
+		if (process.env.NODE_ENV === 'test') {
+			throw error;
+		}
+		const errorHandler = createErrorHandler();
+		errorHandler.handle(error, { command: 'create', timestamp: new Date() });
 	}
 }
 
@@ -487,11 +908,7 @@ async function buildField(): Promise<SchemaField> {
 			while (addingValidations) {
 				const validation = await select({
 					message: 'Select validation:',
-					choices: [
-						...availableValidations,
-						new Separator(),
-						{ name: 'Done', value: 'DONE' },
-					],
+					choices: [...availableValidations, new Separator(), { name: 'Done', value: 'DONE' }],
 				});
 
 				if (validation === 'DONE') {
@@ -518,7 +935,7 @@ async function buildField(): Promise<SchemaField> {
 		optional,
 		nullable,
 		validations,
-		description: description || undefined,
+		description: description ?? undefined,
 	};
 }
 

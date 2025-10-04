@@ -5,13 +5,7 @@
  * Extracts Zod schema definitions and metadata from TypeScript source files
  */
 
-import {
-	type SourceFile,
-	type VariableDeclaration,
-	type CallExpression,
-	SyntaxKind,
-	type Node,
-} from 'ts-morph';
+import { type Node, type SourceFile, SyntaxKind, type VariableDeclaration } from 'ts-morph';
 
 // === TYPES ===
 
@@ -201,7 +195,7 @@ export class ZodSchemaExtractor {
 				return JSON.parse(metaStr) as Record<string, unknown>;
 			} catch {
 				// Fallback to Function for complex cases
-				// eslint-disable-next-line no-new-func
+
 				const meta = new Function(`return ${metaMatch[1]}`)();
 				return meta as Record<string, unknown>;
 			}
@@ -246,13 +240,14 @@ export class ZodSchemaExtractor {
 	 * Extract TSDoc comments
 	 */
 	extractTSDoc(node: Node): string | undefined {
-		const jsDoc = node
-			.getChildren()
-			.find((child) => child.getKind() === SyntaxKind.JSDoc);
+		const jsDoc = node.getChildren().find((child) => child.getKind() === SyntaxKind.JSDoc);
 
 		if (!jsDoc) return undefined;
 
-		return jsDoc.getText().replace(/^\/\*\*|\*\/$/g, '').trim();
+		return jsDoc
+			.getText()
+			.replace(/^\/\*\*|\*\/$/g, '')
+			.trim();
 	}
 
 	/**

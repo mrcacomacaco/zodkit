@@ -20,8 +20,6 @@ import {
 	generateJSONSchema,
 	generateMarkdown,
 	generateOpenAPI,
-	validateExamples,
-	type ExampleValidator,
 } from '../../core/documentation';
 import { Infrastructure } from '../../core/infrastructure';
 import { Utils } from '../../utils';
@@ -51,10 +49,7 @@ export interface DocsOptions {
 	servers?: string[];
 }
 
-export async function docsCommand(
-	options: DocsOptions = {},
-	command?: Command,
-): Promise<void> {
+export async function docsCommand(options: DocsOptions = {}, command?: Command): Promise<void> {
 	const globalOpts = command?.parent?.opts() || {};
 	const isJsonMode = globalOpts.json;
 	const isQuiet = globalOpts.quiet;
@@ -110,7 +105,9 @@ export async function docsCommand(
 		// Validate examples if requested
 		if (options.validateExamples && !isJsonMode) {
 			logger.info('🔍 Validating examples...');
-			const validator = new (await import('../../core/documentation/example-validator')).ExampleValidator();
+			const validator = new (
+				await import('../../core/documentation/example-validator')
+			).ExampleValidator();
 
 			let validExamples = 0;
 			let invalidExamples = 0;
@@ -209,7 +206,10 @@ export async function docsCommand(
 				),
 			);
 		} else {
-			logger.error('Documentation generation failed:', error instanceof Error ? error.message : String(error));
+			logger.error(
+				'Documentation generation failed:',
+				error instanceof Error ? error.message : String(error),
+			);
 		}
 		process.exit(1);
 	}

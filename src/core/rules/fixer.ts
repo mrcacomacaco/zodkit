@@ -169,12 +169,7 @@ export class Fixer {
 	/**
 	 * Create a method insertion fix (e.g., add .describe())
 	 */
-	insertMethod(
-		context: FixerContext,
-		targetPosition: number,
-		method: string,
-		args?: string,
-	): Fix {
+	insertMethod(context: FixerContext, targetPosition: number, method: string, args?: string): Fix {
 		const methodCall = args ? `.${method}(${args})` : `.${method}()`;
 
 		return this.insert(context, targetPosition, methodCall);
@@ -230,7 +225,10 @@ export class Fixer {
 	/**
 	 * Apply multiple fixes to source files
 	 */
-	async applyFixes(fixes: Fix[], options: { dryRun?: boolean; safeOnly?: boolean } = {}): Promise<FixResult> {
+	async applyFixes(
+		fixes: Fix[],
+		options: { dryRun?: boolean; safeOnly?: boolean } = {},
+	): Promise<FixResult> {
 		const result: FixResult = {
 			applied: 0,
 			skipped: 0,
@@ -247,7 +245,7 @@ export class Fixer {
 				continue;
 			}
 
-			const fileFixes = fixesByFile.get(fix.filePath) || [];
+			const fileFixes = fixesByFile.get(fix.filePath) ?? [];
 			fileFixes.push(fix);
 			fixesByFile.set(fix.filePath, fileFixes);
 		}
@@ -356,12 +354,12 @@ export function createFix(params: {
 }): Fix {
 	return {
 		id: `fix_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-		description: params.description || 'Apply automatic fix',
+		description: params.description ?? 'Apply automatic fix',
 		filePath: params.filePath,
 		line: 0,
 		column: 0,
 		impact: 'safe',
-		rule: params.rule || 'auto-fix',
+		rule: params.rule ?? 'auto-fix',
 		changes: [
 			{
 				type: 'replace',
@@ -381,7 +379,7 @@ export function applyFixes(violations: Array<{ fix?: Fix }>): { applied: number;
 	let applied = 0;
 	let failed = 0;
 
-	const fs = require('fs');
+	const fs = require('node:fs');
 
 	// Group fixes by file to avoid reading/writing multiple times
 	const fixesByFile = new Map<string, Fix[]>();
@@ -392,7 +390,7 @@ export function applyFixes(violations: Array<{ fix?: Fix }>): { applied: number;
 			if (!fixesByFile.has(filePath)) {
 				fixesByFile.set(filePath, []);
 			}
-			fixesByFile.get(filePath)!.push(violation.fix);
+			fixesByFile.get(filePath)?.push(violation.fix);
 		}
 	}
 
@@ -439,7 +437,7 @@ export function applyFixes(violations: Array<{ fix?: Fix }>): { applied: number;
 
 			fs.writeFileSync(filePath, newContent);
 			applied += fixes.length;
-		} catch (error) {
+		} catch (_error) {
 			failed += fixes.length;
 		}
 	}

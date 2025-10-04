@@ -29,11 +29,11 @@ export async function setupCommand(
 	options: SetupOptions = {},
 	command?: Command,
 ): Promise<void> {
-	const globalOpts = command?.parent?.opts() || {};
+	const globalOpts = command?.parent?.opts() ?? {};
 	const isJsonMode = globalOpts.json;
 
 	try {
-		const mode = options.mode || detectMode(command?.name());
+		const mode = options.mode ?? detectMode(command?.name());
 
 		if (!isJsonMode) {
 			console.log(pc.bold(pc.blue('⚡ ZodKit Setup')));
@@ -115,7 +115,7 @@ async function initializeProject(
 	}
 
 	// Determine preset
-	const preset = options.preset || 'standard';
+	const preset = options.preset ?? 'standard';
 	const config = generateConfig(preset);
 
 	// Write configuration
@@ -141,18 +141,18 @@ async function initializeProject(
 		const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
 		// Add scripts
-		packageJson.scripts = packageJson.scripts || {};
+		packageJson.scripts = packageJson.scripts ?? {};
 		packageJson.scripts.zodkit = 'zodkit';
 		packageJson.scripts['zodkit:check'] = 'zodkit analyze --mode check';
 		packageJson.scripts['zodkit:fix'] = 'zodkit analyze --mode fix';
 
 		// Add dependencies if not present
-		packageJson.devDependencies = packageJson.devDependencies || {};
+		packageJson.devDependencies = packageJson.devDependencies ?? {};
 		if (!packageJson.devDependencies.zodkit) {
 			packageJson.devDependencies.zodkit = '^1.0.0';
 		}
 		if (!packageJson.dependencies?.zod) {
-			packageJson.dependencies = packageJson.dependencies || {};
+			packageJson.dependencies = packageJson.dependencies ?? {};
 			packageJson.dependencies.zod = '^3.22.0';
 		}
 
@@ -179,7 +179,7 @@ async function generateContracts(
 	isJsonMode?: boolean,
 	target?: string,
 ): Promise<void> {
-	const contractType = options.contractType || 'openapi';
+	const contractType = options.contractType ?? 'openapi';
 
 	if (!isJsonMode) {
 		console.log(`\n📄 Generating ${contractType.toUpperCase()} contracts...`);
@@ -214,7 +214,7 @@ async function generateContracts(
 	}
 
 	// Write contract file
-	const outputPath = target || `api.${contractType}.yaml`;
+	const outputPath = target ?? `api.${contractType}.yaml`;
 	fs.writeFileSync(outputPath, contract, 'utf8');
 
 	if (!isJsonMode) {
@@ -284,7 +284,7 @@ function generateConfig(preset: string): string {
 		},
 	};
 
-	const config = configs[preset as keyof typeof configs] || configs.standard;
+	const config = configs[preset as keyof typeof configs] ?? configs.standard;
 
 	return `/**
  * ZodKit Configuration

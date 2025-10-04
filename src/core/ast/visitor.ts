@@ -32,7 +32,7 @@ export interface VisitorContext {
  */
 export interface SchemaVisitor {
 	/** Called when entering a node */
-	enter?(context: VisitorContext): void | boolean;
+	enter?(context: VisitorContext): undefined | boolean;
 	/** Called when exiting a node */
 	exit?(context: VisitorContext): void;
 	/** Called for specific Zod method calls */
@@ -53,7 +53,7 @@ export interface SchemaVisitor {
  * Schema walker that traverses Zod schemas using visitor pattern
  */
 export class SchemaWalker {
-	private visitors: SchemaVisitor[] = [];
+	private readonly visitors: SchemaVisitor[] = [];
 
 	/**
 	 * Register a visitor
@@ -300,11 +300,7 @@ export class SchemaWalker {
 /**
  * Convenience function to create and use a visitor
  */
-export function visitSchema(
-	schema: ZodSchemaInfo,
-	rootNode: Node,
-	visitor: SchemaVisitor,
-): void {
+export function visitSchema(schema: ZodSchemaInfo, rootNode: Node, visitor: SchemaVisitor): void {
 	const walker = new SchemaWalker();
 	walker.addVisitor(visitor);
 	walker.walk(schema, rootNode);

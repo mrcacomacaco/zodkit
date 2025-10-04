@@ -30,7 +30,7 @@ export interface MarkdownOptions {
 }
 
 export class MarkdownGenerator {
-	private options: Required<MarkdownOptions>;
+	private readonly options: Required<MarkdownOptions>;
 
 	constructor(options: MarkdownOptions = {}) {
 		this.options = {
@@ -96,7 +96,7 @@ export class MarkdownGenerator {
 		const lines: string[] = ['## Table of Contents', ''];
 
 		tree.walk((node) => {
-			if (node.id === 'root') return;
+			if (node.id === 'root') return undefined;
 
 			const indent = '  '.repeat(node.depth - 1);
 			const link = `#${this.slugify(node.name)}`;

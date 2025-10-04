@@ -242,8 +242,8 @@ const HintView: React.FC<{ engine?: HintEngine }> = ({ engine }) => {
 			<Text bold color="yellow" marginBottom={1}>
 				💡 Schema Hints ({hints.length} found)
 			</Text>
-			{hints.slice(0, 10).map((hint, i) => (
-				<Text key={i}>
+			{hints.slice(0, 10).map((hint) => (
+				<Text key={`${hint.severity}-${hint.message}`}>
 					• {hint.severity === 'error' ? '❌' : '⚠️'} {hint.message}
 				</Text>
 			))}

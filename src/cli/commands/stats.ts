@@ -7,6 +7,12 @@ import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import fg from 'fast-glob';
 import * as pc from 'picocolors';
+import {
+	PatternsArgSchema,
+	StatsOptionsSchema,
+	validateCommandOptions,
+} from '../../core/command-validation';
+import { createErrorHandler } from '../../core/error-handler';
 import { createStatsAggregator, type SchemaStats } from '../../core/schema-stats';
 
 export interface StatsCommandOptions {
@@ -27,15 +33,17 @@ export async function statsCommand(
 	patternsArg?: string | string[],
 	options: StatsCommandOptions = {},
 ): Promise<void> {
+	// Validate inputs with Zod (outside try block for error handler)
+	const validatedPatterns = PatternsArgSchema.parse(patternsArg);
+	const validatedOptions = validateCommandOptions(StatsOptionsSchema, options, 'stats');
+
 	try {
 		console.log(pc.blue('📊 zodkit stats - Analyzing schema statistics...'));
 
 		// Handle patterns from either argument or options
 		let patterns: string[];
-		if (patternsArg) {
-			patterns = Array.isArray(patternsArg) ? patternsArg : [patternsArg];
-		} else if (options.patterns) {
-			patterns = options.patterns;
+		if (validatedPatterns) {
+			patterns = Array.isArray(validatedPatterns) ? validatedPatterns : [validatedPatterns];
 		} else {
 			patterns = ['**/*.schema.ts', '**/schemas/**/*.ts', 'src/**/*.zod.ts'];
 		}
@@ -68,36 +76,36 @@ export async function statsCommand(
 
 		// Generate statistics
 		const stats = aggregator.generateStats({
-			includeComplexity: options.includeComplexity !== false,
-			includeUsagePatterns: options.includePatterns !== false,
-			includeHotspots: options.includeHotspots !== false,
-			includeBundleImpact: options.includeBundleImpact !== false,
+			includeComplexity: validatedOptions.complexity !== false,
+			includeUsagePatterns: validatedOptions.patterns !== false,
+			includeHotspots: validatedOptions.hotspots !== false,
+			includeBundleImpact: validatedOptions.bundleImpact !== false,
 		});
 
 		// Output results
-		if (options.format === 'json') {
+		if (validatedOptions.format === 'json') {
 			const jsonOutput = JSON.stringify(stats, null, 2);
-			if (options.output) {
-				writeFileSync(resolve(options.output), jsonOutput);
-				console.log(pc.green(`✅ Stats saved to: ${options.output}`));
+			if (validatedOptions.output) {
+				writeFileSync(resolve(validatedOptions.output), jsonOutput);
+				console.log(pc.green(`✅ Stats saved to: ${validatedOptions.output}`));
 			} else {
 				console.log(jsonOutput);
 			}
 		} else {
-			printTextReport(stats, options.verbose || false);
+			printTextReport(stats, validatedOptions.verbose ?? false);
 
-			if (options.output) {
+			if (validatedOptions.output) {
 				const textReport = generateTextReport(stats);
-				writeFileSync(resolve(options.output), textReport);
-				console.log(pc.green(`\n✅ Stats saved to: ${options.output}`));
+				writeFileSync(resolve(validatedOptions.output), textReport);
+				console.log(pc.green(`\n✅ Stats saved to: ${validatedOptions.output}`));
 			}
 		}
 	} catch (error) {
-		console.error(
-			pc.red('❌ Stats command failed:'),
-			error instanceof Error ? error.message : String(error),
-		);
-		process.exit(1);
+		if (process.env.NODE_ENV === 'test') {
+			throw error;
+		}
+		const errorHandler = createErrorHandler({ verbose: validatedOptions.verbose ?? false });
+		errorHandler.handle(error, { command: 'stats', timestamp: new Date() });
 	}
 }
 
@@ -123,9 +131,7 @@ function printTextReport(stats: SchemaStats, verbose: boolean): void {
 
 	// Complexity metrics
 	console.log(pc.cyan('Complexity Metrics:'));
-	console.log(
-		`  Average depth:       ${stats.complexityMetrics.averageDepth.toFixed(1)} levels`,
-	);
+	console.log(`  Average depth:       ${stats.complexityMetrics.averageDepth.toFixed(1)} levels`);
 	console.log(`  Max depth:           ${stats.complexityMetrics.maxDepth} levels`);
 	console.log(
 		`  Average field count: ${stats.complexityMetrics.averageFieldCount.toFixed(1)} fields`,
@@ -137,19 +143,25 @@ function printTextReport(stats: SchemaStats, verbose: boolean): void {
 
 	// Complex schemas
 	if (stats.complexityMetrics.complexSchemas.length > 0) {
-		console.log(pc.yellow(`⚠️  Complex Schemas (${stats.complexityMetrics.complexSchemas.length}):`));
-		const displayCount = verbose ? stats.complexityMetrics.complexSchemas.length : Math.min(5, stats.complexityMetrics.complexSchemas.length);
+		console.log(
+			pc.yellow(`⚠️  Complex Schemas (${stats.complexityMetrics.complexSchemas.length}):`),
+		);
+		const displayCount = verbose
+			? stats.complexityMetrics.complexSchemas.length
+			: Math.min(5, stats.complexityMetrics.complexSchemas.length);
 		for (let i = 0; i < displayCount; i++) {
 			const schema = stats.complexityMetrics.complexSchemas[i];
-			console.log(
-				`  ${pc.bold(schema.name)} (complexity: ${schema.complexity})`,
-			);
+			console.log(`  ${pc.bold(schema.name)} (complexity: ${schema.complexity})`);
 			schema.reasons.forEach((reason) => {
 				console.log(pc.gray(`    - ${reason}`));
 			});
 		}
 		if (!verbose && stats.complexityMetrics.complexSchemas.length > 5) {
-			console.log(pc.gray(`  ... and ${stats.complexityMetrics.complexSchemas.length - 5} more (use --verbose to see all)`));
+			console.log(
+				pc.gray(
+					`  ... and ${stats.complexityMetrics.complexSchemas.length - 5} more (use --verbose to see all)`,
+				),
+			);
 		}
 		console.log();
 	}
@@ -173,11 +185,7 @@ function printTextReport(stats: SchemaStats, verbose: boolean): void {
 		for (let i = 0; i < displayCount; i++) {
 			const hotspot = stats.hotspots[i];
 			const severityColor =
-				hotspot.severity === 'high'
-					? pc.red
-					: hotspot.severity === 'medium'
-						? pc.yellow
-						: pc.blue;
+				hotspot.severity === 'high' ? pc.red : hotspot.severity === 'medium' ? pc.yellow : pc.blue;
 			console.log(
 				`  ${severityColor(hotspot.severity.toUpperCase())} - ${pc.bold(hotspot.name)} (${hotspot.file})`,
 			);
@@ -191,7 +199,9 @@ function printTextReport(stats: SchemaStats, verbose: boolean): void {
 			}
 		}
 		if (!verbose && stats.hotspots.length > 5) {
-			console.log(pc.gray(`  ... and ${stats.hotspots.length - 5} more (use --verbose to see all)`));
+			console.log(
+				pc.gray(`  ... and ${stats.hotspots.length - 5} more (use --verbose to see all)`),
+			);
 		}
 		console.log();
 	}
@@ -205,8 +215,12 @@ function printTextReport(stats: SchemaStats, verbose: boolean): void {
 		console.log();
 
 		if (impact.largestSchemas.length > 0) {
-			console.log(pc.yellow(`  Largest schemas (top ${Math.min(5, impact.largestSchemas.length)}):`));
-			const displayCount = verbose ? impact.largestSchemas.length : Math.min(5, impact.largestSchemas.length);
+			console.log(
+				pc.yellow(`  Largest schemas (top ${Math.min(5, impact.largestSchemas.length)}):`),
+			);
+			const displayCount = verbose
+				? impact.largestSchemas.length
+				: Math.min(5, impact.largestSchemas.length);
 			for (let i = 0; i < displayCount; i++) {
 				const schema = impact.largestSchemas[i];
 				const schemaKB = (schema.estimatedSize / 1024).toFixed(2);
@@ -240,12 +254,12 @@ function printTextReport(stats: SchemaStats, verbose: boolean): void {
  */
 function generateTextReport(stats: SchemaStats): string {
 	let report = 'ZODKIT SCHEMA STATISTICS\n';
-	report += '='.repeat(50) + '\n\n';
+	report += `${'='.repeat(50)}\n\n`;
 
 	report += `Total schemas: ${stats.totalSchemas}\n\n`;
 
 	report += 'TYPE DISTRIBUTION\n';
-	report += '-'.repeat(50) + '\n';
+	report += `${'-'.repeat(50)}\n`;
 	for (const [type, count] of Object.entries(stats.schemasByType)) {
 		const percentage = ((count / stats.totalSchemas) * 100).toFixed(1);
 		report += `${type}: ${count} (${percentage}%)\n`;
@@ -253,7 +267,7 @@ function generateTextReport(stats: SchemaStats): string {
 	report += '\n';
 
 	report += 'COMPLEXITY METRICS\n';
-	report += '-'.repeat(50) + '\n';
+	report += `${'-'.repeat(50)}\n`;
 	report += `Average depth: ${stats.complexityMetrics.averageDepth.toFixed(1)}\n`;
 	report += `Max depth: ${stats.complexityMetrics.maxDepth}\n`;
 	report += `Average field count: ${stats.complexityMetrics.averageFieldCount.toFixed(1)}\n`;
@@ -264,7 +278,7 @@ function generateTextReport(stats: SchemaStats): string {
 
 	if (stats.complexityMetrics.complexSchemas.length > 0) {
 		report += 'COMPLEX SCHEMAS\n';
-		report += '-'.repeat(50) + '\n';
+		report += `${'-'.repeat(50)}\n`;
 		for (const schema of stats.complexityMetrics.complexSchemas) {
 			report += `${schema.name} (complexity: ${schema.complexity})\n`;
 			schema.reasons.forEach((reason) => {
@@ -276,7 +290,7 @@ function generateTextReport(stats: SchemaStats): string {
 
 	if (stats.usagePatterns.length > 0) {
 		report += 'USAGE PATTERNS\n';
-		report += '-'.repeat(50) + '\n';
+		report += `${'-'.repeat(50)}\n`;
 		for (const pattern of stats.usagePatterns) {
 			report += `${pattern.pattern}: ${pattern.count}\n`;
 		}
@@ -285,7 +299,7 @@ function generateTextReport(stats: SchemaStats): string {
 
 	if (stats.hotspots.length > 0) {
 		report += 'SCHEMA HOTSPOTS\n';
-		report += '-'.repeat(50) + '\n';
+		report += `${'-'.repeat(50)}\n`;
 		for (const hotspot of stats.hotspots) {
 			report += `${hotspot.severity.toUpperCase()} - ${hotspot.name} (${hotspot.file})\n`;
 			hotspot.issues.forEach((issue) => {
@@ -300,7 +314,7 @@ function generateTextReport(stats: SchemaStats): string {
 
 	if (stats.recommendations.length > 0) {
 		report += 'RECOMMENDATIONS\n';
-		report += '-'.repeat(50) + '\n';
+		report += `${'-'.repeat(50)}\n`;
 		stats.recommendations.forEach((rec) => {
 			report += `• ${rec}\n`;
 		});

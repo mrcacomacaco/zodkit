@@ -7,7 +7,7 @@
 
 import type { Node } from 'ts-morph';
 import type { ZodSchemaInfo } from '../../ast/extractor';
-import { type SchemaVisitor, type VisitorContext } from '../../ast/visitor';
+import type { SchemaVisitor, VisitorContext } from '../../ast/visitor';
 import type { RuleViolation } from '../types';
 
 export interface PreferDiscriminatedUnionOptions {
@@ -46,7 +46,7 @@ export function checkPreferDiscriminatedUnion(
 					schemaName: schema.name,
 					filePath: schema.filePath,
 					line: schema.line,
-					column: schema.column || 0,
+					column: schema.column ?? 0,
 					message: `Schema "${schema.name}" uses z.union() with ${optionCount} options. Consider using z.discriminatedUnion() for better type inference.`,
 					severity: 'info',
 				};
@@ -122,7 +122,7 @@ export function createPreferDiscriminatedUnionVisitor(
 				if (discriminators.length > 0) {
 					violation.suggestions = [
 						`Potential discriminator fields found: ${discriminators.join(', ')}`,
-						...(violation.suggestions || []),
+						...(violation.suggestions ?? []),
 					];
 				}
 

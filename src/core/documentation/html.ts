@@ -23,7 +23,7 @@ export interface HTMLOptions {
 }
 
 export class HTMLGenerator {
-	private options: Required<HTMLOptions>;
+	private readonly options: Required<HTMLOptions>;
 
 	constructor(options: HTMLOptions = {}) {
 		this.options = {
@@ -344,7 +344,7 @@ export class HTMLGenerator {
 		const nav: string[] = ['<aside class="sidebar">', '<h2>Navigation</h2>', '<nav><ul>'];
 
 		tree.walk((node) => {
-			if (node.id === 'root') return;
+			if (node.id === 'root') return undefined;
 
 			const indent = '  '.repeat(node.depth - 1);
 
@@ -435,7 +435,9 @@ export class HTMLGenerator {
 	private generateSchemaHTML(node: DocNode): string {
 		const parts: string[] = [];
 
-		parts.push(`<article class="schema" id="${this.slugify(node.name)}" data-schema="${node.name}">`);
+		parts.push(
+			`<article class="schema" id="${this.slugify(node.name)}" data-schema="${node.name}">`,
+		);
 		parts.push(`<h3>${this.escapeHtml(node.name)}</h3>`);
 
 		if (node.description) {
@@ -445,10 +447,10 @@ export class HTMLGenerator {
 		// Deprecated warning
 		if (node.metadata?.deprecated) {
 			const deprecatedMsg =
-				typeof node.metadata.deprecated === 'string' ? node.metadata.deprecated : 'This schema is deprecated';
-			parts.push(
-				`<div class="deprecated">⚠️ Deprecated: ${this.escapeHtml(deprecatedMsg)}</div>`,
-			);
+				typeof node.metadata.deprecated === 'string'
+					? node.metadata.deprecated
+					: 'This schema is deprecated';
+			parts.push(`<div class="deprecated">⚠️ Deprecated: ${this.escapeHtml(deprecatedMsg)}</div>`);
 		}
 
 		// Metadata
@@ -575,13 +577,11 @@ export class HTMLGenerator {
 	 * Generate JavaScript for interactivity
 	 */
 	private generateJS(tree: DocumentationTree): string {
-		const schemas = tree
-			.getSchemas()
-			.map((n) => ({
-				name: n.name,
-				description: n.description || '',
-				id: this.slugify(n.name),
-			}));
+		const schemas = tree.getSchemas().map((n) => ({
+			name: n.name,
+			description: n.description || '',
+			id: this.slugify(n.name),
+		}));
 
 		return `
         // Search functionality
