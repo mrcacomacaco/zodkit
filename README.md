@@ -82,6 +82,11 @@ zodkit test
   - Property-based testing
   - Performance benchmarks
   - Contract testing
+- **lint** - Schema linting and validation
+  - 6 built-in linting rules
+  - Detects missing descriptions, loose objects, z.any() usage, and more
+  - Multiple output formats (text, JSON)
+  - Severity-based filtering (error, warning, info)
 - **init** - Project initialization with presets
 
 #### 🤖 **AI Integration**
@@ -90,7 +95,6 @@ zodkit test
 
 ### 🚧 Planned Features (Coming Soon)
 
-- **lint** - Schema linting with auto-fix capability
 - **stats** - Schema statistics and complexity analysis
 - **create** - Interactive schema builder with templates
 - **refactor** - Rename, extract, inline, and simplify schemas
@@ -368,6 +372,39 @@ zodkit diff --old v1.ts --new v2.ts --strict
 - **JSON**: Machine-readable format for CI/CD integration
 - **Markdown**: Documentation-ready format with sections
 - **HTML**: Beautiful standalone report with styling
+
+#### Lint Schemas for Best Practices
+
+```bash
+# Lint all schema files
+zodkit lint
+
+# Lint specific files
+zodkit lint "src/schemas/**/*.ts"
+
+# Output as JSON
+zodkit lint --format json
+
+# Filter by severity
+zodkit lint --severity error
+
+# Save report to file
+zodkit lint --output lint-report.txt
+```
+
+**What it checks:**
+- ✅ **Missing Descriptions**: Ensures all schemas have `.describe()` calls
+- ✅ **Missing Metadata**: Checks for `.meta()` with required fields
+- ✅ **Type Safety**: Detects `z.any()` usage (suggests `z.unknown()` instead)
+- ✅ **Loose Objects**: Finds `.passthrough()` and `.catchall()` usage
+- ✅ **Validation**: Recommends refinements for complex validation scenarios
+- ✅ **Discriminated Unions**: Suggests using discriminated unions for better type inference
+
+**Output:**
+- Severity levels: Error, Warning, Info
+- Actionable suggestions for each issue
+- File/line/column locations
+- Summary statistics
 
 #### Sync with External Sources
 

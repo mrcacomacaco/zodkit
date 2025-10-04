@@ -27,6 +27,16 @@ import {
 	createPreferDiscriminatedUnionVisitor,
 	type PreferDiscriminatedUnionOptions,
 } from './builtin/prefer-discriminated-union';
+import {
+	checkNoLooseObjects,
+	createNoLooseObjectsVisitor,
+	type NoLooseObjectsOptions,
+} from './builtin/no-loose-objects';
+import {
+	checkRequireRefinements,
+	createRequireRefinementsVisitor,
+	type RequireRefinementsOptions,
+} from './builtin/require-refinements';
 
 export interface RuleEngineOptions {
 	/** Enable/disable specific rules */
@@ -35,6 +45,8 @@ export interface RuleEngineOptions {
 		'prefer-meta'?: boolean | PreferMetaOptions;
 		'no-any-type'?: boolean | NoAnyTypeOptions;
 		'prefer-discriminated-union'?: boolean | PreferDiscriminatedUnionOptions;
+		'no-loose-objects'?: boolean | NoLooseObjectsOptions;
+		'require-refinements'?: boolean | RequireRefinementsOptions;
 	};
 	/** Auto-fix violations */
 	autoFix?: boolean;
@@ -123,6 +135,26 @@ export class RuleEngine {
 		if (this.isRuleEnabled('prefer-discriminated-union', rules)) {
 			const opts = this.getRuleOptions('prefer-discriminated-union', rules);
 			const violation = checkPreferDiscriminatedUnion(schema, opts);
+			if (violation) violations.push(violation);
+		}
+
+		// Run no-loose-objects rule
+		if (this.isRuleEnabled('no-loose-objects', rules)) {
+			const opts = this.getRuleOptions('no-loose-objects', rules);
+			const violation = checkNoLooseObjects(schema, sourceFile, {
+				...opts,
+				autoFix: this.options.autoFix,
+			});
+			if (violation) violations.push(violation);
+		}
+
+		// Run require-refinements rule
+		if (this.isRuleEnabled('require-refinements', rules)) {
+			const opts = this.getRuleOptions('require-refinements', rules);
+			const violation = checkRequireRefinements(schema, sourceFile, {
+				...opts,
+				autoFix: this.options.autoFix,
+			});
 			if (violation) violations.push(violation);
 		}
 

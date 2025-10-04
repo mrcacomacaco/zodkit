@@ -36,6 +36,7 @@ const docsCommand = lazyImport(() => import('./commands/docs'));
 const testCommand = lazyImport(() => import('./commands/test'));
 const migrateCommand = lazyImport(() => import('./commands/migrate'));
 const diffCommand = lazyImport(() => import('./commands/diff'));
+const lintCommand = lazyImport(() => import('./commands/lint'));
 // Temporarily disabled - commands not yet implemented
 // const refactorCommand = lazyImport(() => import('./commands/refactor'));
 // const transformCommand = lazyImport(() => import('./commands/transform'));
@@ -144,6 +145,7 @@ program.addCommand(CommandConfigs.contract().action(contractCommand).build());
 // Transformation Commands
 program.addCommand(CommandConfigs.migrate().action(migrateCommand).build());
 program.addCommand(CommandConfigs.diff().action(diffCommand).build());
+program.addCommand(CommandConfigs.lint().action(lintCommand).build());
 // Temporarily disabled - commands not yet implemented
 // program.addCommand(CommandConfigs.refactor().action(refactorCommand).build());
 // program.addCommand(CommandConfigs.compose().action(composeCommand).build());

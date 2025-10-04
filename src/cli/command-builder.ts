@@ -215,6 +215,15 @@ export const CommandConfigs = {
 			.option('--strict', 'enable strict comparison mode')
 			.option('--ignore-metadata', 'ignore metadata changes'),
 
+	lint: () =>
+		createCommand('lint', 'Lint schemas for best practices and anti-patterns', 'testing')
+			.argument('[patterns...]', 'file patterns to lint')
+			.option('--fix', 'automatically fix issues')
+			.option('--severity <level>', 'filter by severity: error, warning, info')
+			.option('--output <path>', 'output file for lint report')
+			.option('--format <format>', 'output format: text, json', 'text')
+			.option('--rules <rules>', 'custom rule configuration (JSON)', JSON.parse),
+
 	refactor: () =>
 		createCommand('refactor', 'Smart schema refactoring', 'transformation')
 			.option('--schema <name>', 'schema to refactor')

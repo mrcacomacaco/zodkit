@@ -342,3 +342,107 @@ export function createFixerContext(
 		metadata,
 	};
 }
+
+/**
+ * Helper to create a fix from a simple replacement
+ */
+export function createFix(params: {
+	filePath: string;
+	start: number;
+	end: number;
+	replacement: string;
+	description?: string;
+	rule?: string;
+}): Fix {
+	return {
+		id: `fix_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+		description: params.description || 'Apply automatic fix',
+		filePath: params.filePath,
+		line: 0,
+		column: 0,
+		impact: 'safe',
+		rule: params.rule || 'auto-fix',
+		changes: [
+			{
+				type: 'replace',
+				start: params.start,
+				end: params.end,
+				oldText: '',
+				newText: params.replacement,
+			},
+		],
+	};
+}
+
+/**
+ * Apply fixes from violations
+ */
+export function applyFixes(violations: Array<{ fix?: Fix }>): { applied: number; failed: number } {
+	let applied = 0;
+	let failed = 0;
+
+	const fs = require('fs');
+
+	// Group fixes by file to avoid reading/writing multiple times
+	const fixesByFile = new Map<string, Fix[]>();
+
+	for (const violation of violations) {
+		if (violation.fix) {
+			const filePath = violation.fix.filePath;
+			if (!fixesByFile.has(filePath)) {
+				fixesByFile.set(filePath, []);
+			}
+			fixesByFile.get(filePath)!.push(violation.fix);
+		}
+	}
+
+	// Apply all fixes for each file
+	for (const [filePath, fixes] of fixesByFile) {
+		try {
+			const content = fs.readFileSync(filePath, 'utf-8');
+			let newContent = content;
+
+			// Collect all changes from all fixes for this file
+			const allChanges: FixChange[] = [];
+			for (const fix of fixes) {
+				allChanges.push(...fix.changes);
+			}
+
+			// Sort changes in reverse order to maintain positions
+			const sortedChanges = allChanges.sort((a, b) => b.start - a.start);
+
+			// Check for overlapping changes and skip if found
+			let hasOverlap = false;
+			for (let i = 0; i < sortedChanges.length - 1; i++) {
+				const current = sortedChanges[i];
+				const next = sortedChanges[i + 1];
+				// Overlaps if current.start < next.end (since sorted by start desc)
+				if (current.start < next.end) {
+					hasOverlap = true;
+					console.warn(
+						`Warning: Overlapping fixes detected in ${filePath}. Skipping auto-fix for safety.`,
+					);
+					break;
+				}
+			}
+
+			if (hasOverlap) {
+				failed += fixes.length;
+				continue;
+			}
+
+			// Apply all changes
+			for (const change of sortedChanges) {
+				newContent =
+					newContent.slice(0, change.start) + change.newText + newContent.slice(change.end);
+			}
+
+			fs.writeFileSync(filePath, newContent);
+			applied += fixes.length;
+		} catch (error) {
+			failed += fixes.length;
+		}
+	}
+
+	return { applied, failed };
+}
