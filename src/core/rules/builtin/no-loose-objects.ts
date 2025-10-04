@@ -81,7 +81,7 @@ export function checkNoLooseObjects(
 					filePath: schema.filePath,
 					start: initializer.getStart(),
 					end: initializer.getEnd(),
-					replacement: text.replace('.passthrough()', '').replace(/\.catchall\([^)]*\)/, ''),
+					replacement: text.replaceAll('.passthrough()', '').replaceAll(/\.catchall\([^)]*\)/g, ''),
 				})
 			: undefined,
 	};

@@ -819,10 +819,8 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 
 			// Ensure directory exists
 			const dir = join(resolvedPath, '..');
-			if (!existsSync(dir)) {
-				const { mkdirSync } = await import('node:fs');
-				mkdirSync(dir, { recursive: true });
-			}
+			const { mkdirSync } = await import('node:fs');
+			mkdirSync(dir, { recursive: true });
 
 			writeFileSync(resolvedPath, code);
 			console.log(pc.green(`\n✅ Schema saved to ${resolvedPath}`));

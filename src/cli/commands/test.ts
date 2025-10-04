@@ -119,7 +119,7 @@ export async function testCommand(options: TestCommandOptions): Promise<void> {
 
 		// Benchmark mode - performance comparison
 		if (options.benchmark) {
-			await runBenchmarks(tester, discovery, options);
+			await runBenchmarks(tester, discovery);
 			cleanupAndExit(tester, testingInfra);
 			return;
 		}
@@ -140,7 +140,7 @@ export async function testCommand(options: TestCommandOptions): Promise<void> {
 
 		// Interactive mode - guided testing
 		if (options.interactive) {
-			await runInteractiveMode(tester, discovery, options);
+			await runInteractiveMode(tester, discovery);
 			cleanupAndExit(tester, testingInfra);
 			return;
 		}
@@ -377,7 +377,6 @@ async function generateTestData(
 async function runBenchmarks(
 	tester: SchemaTester,
 	discovery: SchemaDiscovery,
-	_options: TestCommandOptions,
 ): Promise<void> {
 	console.log(pc.cyan('\n⚡ Running schema performance benchmarks...'));
 
@@ -587,7 +586,6 @@ async function runTestSuite(tester: SchemaTester, options: TestCommandOptions): 
 async function runInteractiveMode(
 	tester: SchemaTester,
 	discovery: SchemaDiscovery,
-	_options: TestCommandOptions,
 ): Promise<void> {
 	console.log(pc.cyan('\n🎮 Interactive Testing Mode'));
 	console.log(pc.gray('Choose options for comprehensive schema testing\n'));
@@ -725,7 +723,7 @@ function displayTestResult(result: any, verbose: boolean): void {
 		);
 	}
 
-	if (verbose && result.failures?.length && result.failures.length > 0) {
+	if (verbose && result?.failures?.length && result.failures.length > 0) {
 		console.log(pc.red('   Failures:'));
 		result.failures.slice(0, 3).forEach((failure: any, i: number) => {
 			console.log(`     ${i + 1}. ${failure.message}`);
@@ -734,7 +732,7 @@ function displayTestResult(result: any, verbose: boolean): void {
 			}
 		});
 
-		if (result.failures.length > 3) {
+		if (result?.failures?.length && result.failures.length > 3) {
 			console.log(`     ... and ${result.failures.length - 3} more`);
 		}
 	}

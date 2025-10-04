@@ -221,8 +221,6 @@ export class CommandSuggestionEngine {
 	 * Get follow-up suggestions based on last command
 	 */
 	private getFollowUpSuggestions(lastCommand: string): CommandSuggestion[] {
-		const _suggestions: CommandSuggestion[] = [];
-
 		const followUps: Record<string, CommandSuggestion[]> = {
 			check: [
 				{
@@ -283,8 +281,6 @@ export class CommandSuggestionEngine {
 	 * Detect if project has schema files
 	 */
 	private detectSchemas(cwd: string): boolean {
-		const _patterns = ['**/*.schema.ts', '**/schemas/**/*.ts', '**/zod/**/*.ts'];
-
 		// Simple file existence check (in real implementation, use glob)
 		return (
 			existsSync(resolve(cwd, 'src/schemas')) ||

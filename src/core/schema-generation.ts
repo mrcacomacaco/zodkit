@@ -298,7 +298,7 @@ export const ${name} = z.object({
 ${fields.join(',\n')}
 });`;
 
-		const typeName = name.replace('Schema', '');
+		const typeName = name.replaceAll('Schema', '');
 		const typeCode = `export type ${typeName} = z.infer<typeof ${name}>;`;
 
 		return {
@@ -325,7 +325,7 @@ export const ${name} = z.object({
   data: z.unknown() // Replace with actual schema based on pattern
 });`;
 
-		const typeName = name.replace('Schema', '');
+		const typeName = name.replaceAll('Schema', '');
 		const typeCode = `export type ${typeName} = z.infer<typeof ${name}>;`;
 
 		return {

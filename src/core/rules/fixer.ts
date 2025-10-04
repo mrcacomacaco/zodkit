@@ -5,6 +5,7 @@
  * Provides API for automatically fixing schema issues detected by rules.
  */
 
+import * as crypto from 'node:crypto';
 import type { SourceFile } from 'ts-morph';
 
 /**
@@ -291,7 +292,7 @@ export class Fixer {
 	 * Generate unique fix ID
 	 */
 	private generateId(): string {
-		return `fix_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+		return `fix_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
 	}
 
 	/**
@@ -353,7 +354,7 @@ export function createFix(params: {
 	rule?: string;
 }): Fix {
 	return {
-		id: `fix_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+		id: `fix_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`,
 		description: params.description ?? 'Apply automatic fix',
 		filePath: params.filePath,
 		line: 0,

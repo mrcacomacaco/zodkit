@@ -55,33 +55,33 @@ function createOptimizedEntryPoints() {
 
 	// Optimize CLI entry point
 	try {
-		if (fs.existsSync(cliIndexPath)) {
-			let content = fs.readFileSync(cliIndexPath, 'utf8');
+		let content = fs.readFileSync(cliIndexPath, 'utf8');
 
-			// Remove existing shebang if present
-			content = content.replace(/^#!\/usr\/bin\/env node\n?/, '');
+		// Remove existing shebang if present
+		content = content.replace(/^#!\/usr\/bin\/env node\n?/, '');
 
-			// Add production optimizations
-			const optimized = `#!/usr/bin/env node
+		// Add production optimizations
+		const optimized = `#!/usr/bin/env node
 // Production build - optimized for size and performance
 process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 
 ${content}`;
 
-			fs.writeFileSync(cliIndexPath, optimized);
+		fs.writeFileSync(cliIndexPath, optimized);
+		try {
 			fs.chmodSync(cliIndexPath, 0o755);
-			console.log('✅ Optimized CLI entry point');
+		} catch (error) {
+			if (error.code !== 'ENOENT') throw error;
 		}
+		console.log('✅ Optimized CLI entry point');
 	} catch (error) {
 		console.log('⚠️  Could not optimize CLI entry point:', error.message);
 	}
 
 	// Optimize library entry point
 	try {
-		if (fs.existsSync(libIndexPath)) {
-			optimizeFile(libIndexPath);
-			console.log('✅ Optimized library entry point');
-		}
+		optimizeFile(libIndexPath);
+		console.log('✅ Optimized library entry point');
 	} catch (error) {
 		console.log('⚠️  Could not optimize library entry point:', error.message);
 	}

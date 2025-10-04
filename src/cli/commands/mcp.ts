@@ -291,13 +291,13 @@ async function generateMCPConfig(options: MCPOptions, isJsonMode: boolean): Prom
 
 		// Write to file if in a Claude project
 		try {
-			if (existsSync('.claude')) {
-				const claudePath = '.claude/settings.local.json';
-				writeFileSync(claudePath, claudeConfig);
-				console.log(pc.green(`✅ Saved to ${claudePath}`));
-			}
-		} catch (error) {
-			console.log(pc.yellow(`⚠️  Could not write Claude config: ${error}`));
+			const claudePath = '.claude/settings.local.json';
+			const fs = require('node:fs');
+			fs.mkdirSync('.claude', { recursive: true });
+			writeFileSync(claudePath, claudeConfig);
+			console.log(pc.green(`✅ Saved to ${claudePath}`));
+		} catch (error: any) {
+			console.log(pc.yellow(`⚠️  Could not write Claude config: ${error.message || error}`));
 		}
 
 		// Cursor configuration
@@ -307,20 +307,25 @@ async function generateMCPConfig(options: MCPOptions, isJsonMode: boolean): Prom
 
 		// Write to file if in a Cursor project
 		try {
-			if (existsSync('.cursor')) {
-				const cursorPath = '.cursor/config.json';
-				let existingConfig = {};
-				try {
-					if (existsSync(cursorPath)) {
-						existingConfig = JSON.parse(require('node:fs').readFileSync(cursorPath, 'utf-8'));
-					}
-				} catch {}
-				const mergedConfig = { ...existingConfig, ...configs.cursor };
-				writeFileSync(cursorPath, JSON.stringify(mergedConfig, null, 2));
-				console.log(pc.green(`✅ Saved to ${cursorPath}`));
+			const cursorPath = '.cursor/config.json';
+			const fs = require('node:fs');
+
+			let existingConfig = {};
+			try {
+				existingConfig = JSON.parse(fs.readFileSync(cursorPath, 'utf-8'));
+			} catch (error: any) {
+				// File doesn't exist or invalid JSON - use empty config
+				if (error.code !== 'ENOENT') {
+					throw error;
+				}
 			}
-		} catch (error) {
-			console.log(pc.yellow(`⚠️  Could not write Cursor config: ${error}`));
+
+			const mergedConfig = { ...existingConfig, ...configs.cursor };
+			fs.mkdirSync('.cursor', { recursive: true });
+			writeFileSync(cursorPath, JSON.stringify(mergedConfig, null, 2));
+			console.log(pc.green(`✅ Saved to ${cursorPath}`));
+		} catch (error: any) {
+			console.log(pc.yellow(`⚠️  Could not write Cursor config: ${error.message || error}`));
 		}
 
 		// GitHub Copilot configuration

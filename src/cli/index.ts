@@ -63,7 +63,6 @@ const hintCommand = async (patterns?: string | string[], options?: any, command?
 	return handler(target, { ...options, mode: 'hint' }, command);
 };
 const contractCommand = setupCommand;
-const _profileCommand = analyzeCommand;
 
 const program = new Command();
 

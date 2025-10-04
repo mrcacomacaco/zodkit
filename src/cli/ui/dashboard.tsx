@@ -252,7 +252,7 @@ const HintView: React.FC<{ engine?: HintEngine }> = ({ engine }) => {
 	);
 };
 
-const ProfileView: React.FC<{ engine?: PerformanceProfilerEngine }> = ({ engine }) => {
+const ProfileView: React.FC<{ engine?: PerformanceProfilerEngine }> = () => {
 	return (
 		<Box flexDirection="column" padding={1}>
 			<Text bold color="magenta" marginBottom={1}>
@@ -277,7 +277,7 @@ const ProfileView: React.FC<{ engine?: PerformanceProfilerEngine }> = ({ engine 
 	);
 };
 
-const ScaffoldView: React.FC<{ engine?: any }> = ({ engine }) => {
+const ScaffoldView: React.FC<{ engine?: any }> = () => {
 	const [input, setInput] = useState('');
 
 	return (
@@ -294,7 +294,7 @@ const ScaffoldView: React.FC<{ engine?: any }> = ({ engine }) => {
 	);
 };
 
-const MapView: React.FC<{ engine?: any }> = ({ engine }) => {
+const MapView: React.FC<{ engine?: any }> = () => {
 	return (
 		<Box flexDirection="column" padding={1}>
 			<Text bold color="green" marginBottom={1}>

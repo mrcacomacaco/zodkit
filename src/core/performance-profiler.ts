@@ -8,6 +8,7 @@
  * - profiling/performance-optimizer.ts
  */
 
+import * as crypto from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
@@ -436,7 +437,7 @@ export class PerformanceProfilerEngine extends EventEmitter {
 		source: string,
 	): Promise<PerformanceProfile> {
 		const profile: PerformanceProfile = {
-			id: `prof-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			id: `prof-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`,
 			name,
 			created: new Date(),
 			updated: new Date(),
@@ -572,7 +573,7 @@ export class PerformanceProfilerEngine extends EventEmitter {
 		config: BenchmarkConfig,
 	): Promise<PerformanceBenchmark> {
 		const benchmark: PerformanceBenchmark = {
-			id: `bench-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			id: `bench-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`,
 			name: `Benchmark ${new Date().toISOString()}`,
 			timestamp: new Date(),
 			testData: await this.generateTestData(profile.schema),

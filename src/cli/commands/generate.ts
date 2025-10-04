@@ -411,7 +411,7 @@ ${schemas.join('\n\n')}
 
 export const ${schemaName} = ${schema};
 
-export type ${schemaName.replace('Schema', '')} = z.infer<typeof ${schemaName}>;
+export type ${schemaName.replaceAll('Schema', '')} = z.infer<typeof ${schemaName}>;
 `;
 	}
 
@@ -671,7 +671,7 @@ async function generateFromJsonFiles(
 	if (inputPath.endsWith('.json')) {
 		// Single JSON file
 		const data = JSON.parse(readFileSync(inputPath, 'utf-8')) as unknown;
-		const fileName = inputPath.split('/').pop()?.replace('.json', '') ?? 'generated';
+		const fileName = inputPath.split('/').pop()?.replaceAll('.json', '') ?? 'generated';
 
 		const schema = generator.generateFromJson(data, options);
 		const outputFile = join(outputDir, `${fileName}.schema.ts`);
@@ -691,7 +691,7 @@ async function generateFromJsonFiles(
 
 		for (const jsonFile of jsonFiles) {
 			const data = JSON.parse(readFileSync(jsonFile, 'utf-8')) as unknown;
-			const fileName = jsonFile.split('/').pop()?.replace('.json', '') ?? 'generated';
+			const fileName = jsonFile.split('/').pop()?.replaceAll('.json', '') ?? 'generated';
 
 			const schema = generator.generateFromJson(data, options);
 			const outputFile = join(outputDir, `${fileName}.schema.ts`);

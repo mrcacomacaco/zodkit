@@ -538,7 +538,7 @@ export class SchemaCache {
 	}
 
 	private generateVersion(): string {
-		return `v${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+		return `v${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 	}
 
 	private evictIfNecessary(newEntrySize: number): void {

@@ -105,7 +105,7 @@ export class IgnoreParser {
 			.replaceAll('.', '\\.')
 			.replaceAll('*', '.*')
 			.replaceAll('?', '.')
-			.replace(/\{([^}]+)\}/g, '($1)');
+			.replaceAll(/\{([^}]+)\}/g, '($1)');
 
 		this.patterns.push(new RegExp(`^${regex}$`));
 	}

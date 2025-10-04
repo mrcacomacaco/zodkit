@@ -67,8 +67,6 @@ export async function migrateCommand(
 	options: MigrateOptions,
 	command: Command,
 ): Promise<void> {
-	const globalOpts = command.parent?.opts() ?? {};
-	const _isJsonMode = (globalOpts as GlobalOptions)?.json ?? false;
 	const assistant = new SchemaMigrationAssistant() as any; // SchemaTransformer doesn't take constructor args
 	// No initialize method needed
 

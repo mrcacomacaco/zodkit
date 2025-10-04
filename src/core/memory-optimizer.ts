@@ -471,7 +471,7 @@ export class MemoryOptimizer extends EventEmitter {
 		]);
 
 		Object.keys(moduleCache).forEach((modulePath) => {
-			const moduleName = modulePath.split('/').pop()?.replace('.js', '');
+			const moduleName = modulePath.split('/').pop()?.replaceAll('.js', '');
 			if (moduleName && !essentialModules.has(moduleName) && modulePath.includes('node_modules')) {
 				delete moduleCache[modulePath];
 			}

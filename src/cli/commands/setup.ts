@@ -101,8 +101,19 @@ async function initializeProject(
 
 	// Check if already initialized
 	const configPath = path.join(projectDir, 'zodkit.config.js');
-	if (fs.existsSync(configPath) && !options.force) {
-		throw new Error('Project already initialized. Use --force to reinitialize.');
+	try {
+		fs.accessSync(configPath);
+		if (!options.force) {
+			throw new Error('Project already initialized. Use --force to reinitialize.');
+		}
+	} catch (error: any) {
+		// File doesn't exist, which is fine for initialization
+		if (error.code !== 'ENOENT' && error.message !== 'Project already initialized. Use --force to reinitialize.') {
+			throw error;
+		}
+		if (error.message === 'Project already initialized. Use --force to reinitialize.') {
+			throw error;
+		}
 	}
 
 	if (!isJsonMode) {
@@ -111,11 +122,7 @@ async function initializeProject(
 
 	// Create project directory if needed
 	if (projectName) {
-		try {
-			fs.mkdirSync(projectDir, { recursive: true });
-		} catch (error: any) {
-			if (error.code !== 'EEXIST') throw error;
-		}
+		fs.mkdirSync(projectDir, { recursive: true });
 	}
 
 	// Determine preset
@@ -130,11 +137,7 @@ async function initializeProject(
 
 	dirs.forEach((dir) => {
 		const dirPath = path.join(projectDir, dir);
-		try {
-			fs.mkdirSync(dirPath, { recursive: true });
-		} catch (error: any) {
-			if (error.code !== 'EEXIST') throw error;
-		}
+		fs.mkdirSync(dirPath, { recursive: true });
 	});
 
 	// Create example schema
@@ -143,14 +146,16 @@ async function initializeProject(
 
 	// Update package.json
 	const packageJsonPath = path.join(projectDir, 'package.json');
-	if (fs.existsSync(packageJsonPath)) {
+	try {
 		const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
 		// Add scripts
 		packageJson.scripts = packageJson.scripts ?? {};
-		packageJson.scripts.zodkit = 'zodkit';
-		packageJson.scripts['zodkit:check'] = 'zodkit analyze --mode check';
-		packageJson.scripts['zodkit:fix'] = 'zodkit analyze --mode fix';
+		Object.assign(packageJson.scripts, {
+			zodkit: 'zodkit',
+			'zodkit:check': 'zodkit analyze --mode check',
+			'zodkit:fix': 'zodkit analyze --mode fix',
+		});
 
 		// Add dependencies if not present
 		packageJson.devDependencies = packageJson.devDependencies ?? {};
@@ -170,6 +175,11 @@ async function initializeProject(
 				console.log('\n📥 Installing dependencies...');
 			}
 			// Would run npm install here
+		}
+	} catch (error: any) {
+		// package.json doesn't exist or can't be read - skip update
+		if (error.code !== 'ENOENT') {
+			throw error;
 		}
 	}
 

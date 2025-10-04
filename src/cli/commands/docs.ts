@@ -13,7 +13,6 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Command } from 'commander';
 import * as pc from 'picocolors';
-import { unifiedConfig } from '../../core/config';
 import {
 	createDocumentationTree,
 	generateHTML,
@@ -71,8 +70,7 @@ export async function docsCommand(options: DocsOptions = {}, command?: Command):
 		}
 
 		// Initialize infrastructure
-		const infraConfig = await unifiedConfig.getInfrastructureConfig();
-		const infra = new Infrastructure(infraConfig);
+		const infra = new Infrastructure();
 
 		// Discover schemas
 		const discovery = infra.discovery;

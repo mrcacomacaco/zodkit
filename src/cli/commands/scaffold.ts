@@ -3,16 +3,12 @@
  * @module ScaffoldCommand
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { watch } from 'chokidar';
 import * as pc from 'picocolors';
 import { ConfigManager } from '../../core/config';
-import {
-	type GeneratedSchema,
-	type PatternDetector,
-	ScaffoldEngine,
-} from '../../core/schema-generation';
+import { type GeneratedSchema, ScaffoldEngine } from '../../core/schema-generation';
 
 interface ScaffoldOptions {
 	output?: string;

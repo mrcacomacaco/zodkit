@@ -32,7 +32,7 @@ export const watchCommandConfig = createCommandConfig(
 	undefined,
 ) as any;
 
-export async function watchCommand(options: WatchOptions = {}, _command?: Command): Promise<void> {
+export async function watchCommand(options: WatchOptions = {}): Promise<void> {
 	const startTime = Date.now();
 
 	try {
