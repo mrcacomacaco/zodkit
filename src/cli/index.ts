@@ -207,9 +207,7 @@ program.addCommand(
 			const globalOpts = command?.opts() || {};
 
 			try {
-				const { PluginRegistry, PluginDevToolkit, initializePluginSystem } = await import(
-					'../core/plugin-system'
-				);
+				const { PluginRegistry, PluginDevToolkit } = await import('../core/plugin-system');
 
 				const registry = new PluginRegistry(process.cwd());
 				const toolkit = new PluginDevToolkit(process.cwd());
@@ -466,12 +464,7 @@ program.addCommand(
 				name: `User ${i}`,
 			}));
 
-			await (runPerformanceBenchmark as any)(testSchema, testData, {
-				iterations: parseInt(options.iterations, 10),
-				warmupRounds: parseInt(options.warmup, 10),
-				collectMemory: options.memory,
-				compareBaseline: options.compare,
-			});
+			await runPerformanceBenchmark();
 
 			if (options.baseline) {
 				console.log('💾 Results saved as baseline for future comparisons');

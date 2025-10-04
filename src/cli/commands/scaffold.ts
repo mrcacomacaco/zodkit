@@ -67,19 +67,11 @@ export async function scaffoldCommand(
 		const configManager = ConfigManager.getInstance();
 		await configManager.loadConfig(options.config);
 
-		// Load custom patterns if provided
-		if (options.customPatterns) {
-			try {
-				const _customPatterns: PatternDetector[] = JSON.parse(readFileSync(options.customPatterns, 'utf-8'));
-				// Custom patterns loaded but not currently used
-				void _customPatterns;
-			} catch (_error) {
-				if (!options.quiet && !options.json) {
-					console.warn(
-						pc.yellow(`⚠ Warning: Could not load custom patterns from ${options.customPatterns}`),
-					);
-				}
-			}
+		// Custom patterns feature not yet implemented
+		if (options.customPatterns && !options.quiet && !options.json) {
+			console.warn(
+				pc.yellow('⚠ Warning: Custom patterns feature is not yet implemented'),
+			);
 		}
 
 		// Initialize scaffold engine (ScaffoldEngine doesn't take constructor args)

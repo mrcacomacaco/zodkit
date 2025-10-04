@@ -195,7 +195,6 @@ function setupEventHandlers(hotReloadManager: HotReloadManager, logger: Logger):
 
 	hotReloadManager.on('file-changed', (event) => {
 		reloadCount++;
-		const _timeSinceLastReload = Date.now() - lastReloadTime;
 		lastReloadTime = Date.now();
 
 		const relativePath = relative(process.cwd(), event.filePath);

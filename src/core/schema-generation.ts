@@ -252,9 +252,8 @@ export class SchemaGenerator {
 		const columns = tableSchema.columns || [];
 
 		const fields = columns.map((col: any) => {
-			let zodType: string;
-
 			// Map database types to Zod types
+			let zodType: string;
 			switch (col.type) {
 				case 'uuid':
 					zodType = 'z.string().uuid()';

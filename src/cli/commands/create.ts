@@ -585,19 +585,15 @@ export async function createCommand(options: CreateOptions = {}): Promise<void> 
 		console.log(pc.blue('✨ zodkit create - Interactive Schema Builder\n'));
 
 		// Check if template is provided via CLI option
-		let useTemplateValue: 'template' | 'scratch';
-		if (validatedOptions.template) {
-			useTemplateValue = 'template';
-		} else {
-			// Ask if user wants to use a template
-			useTemplateValue = await select({
-				message: 'How would you like to create your schema?',
-				choices: [
-					{ name: 'Start from a template', value: 'template' },
-					{ name: 'Start from scratch', value: 'scratch' },
-				],
-			});
-		}
+		const useTemplateValue: 'template' | 'scratch' = validatedOptions.template
+			? 'template'
+			: await select({
+					message: 'How would you like to create your schema?',
+					choices: [
+						{ name: 'Start from a template', value: 'template' },
+						{ name: 'Start from scratch', value: 'scratch' },
+					],
+				});
 
 		let schema: SchemaDefinition;
 
