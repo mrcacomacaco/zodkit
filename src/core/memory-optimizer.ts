@@ -43,9 +43,9 @@ export class MemoryMonitor extends EventEmitter {
 
 	constructor(
 		thresholds: MemoryThresholds = {
-			warningMB: 256,
-			criticalMB: 512,
-			maxHeapUtilization: 0.85,
+			warningMB: 512,
+			criticalMB: 1024,
+			maxHeapUtilization: 0.9,
 		},
 	) {
 		super();

@@ -14,6 +14,7 @@ import * as pc from 'picocolors';
 import { Analyzer } from '../../core/analysis';
 import { unifiedConfig } from '../../core/config';
 import { Infrastructure } from '../../core/infrastructure';
+import { createRuleEngine, type RuleViolation } from '../../core/rules';
 import { Utils } from '../../utils';
 
 type AnalyzeMode = 'check' | 'hint' | 'fix' | 'full';
@@ -129,18 +130,48 @@ export async function analyzeCommand(
 			}
 		}
 
+		// Create rule engine
+		const ruleEngine = createRuleEngine({
+			autoFix: options.autoFix || mode === 'fix',
+			rules: {
+				'require-description': mode === 'check' || mode === 'full',
+				'prefer-meta': mode === 'hint' || mode === 'full',
+				'no-any-type': mode === 'check' || mode === 'full',
+				'prefer-discriminated-union': mode === 'hint' || mode === 'full',
+			},
+		});
+
 		// Analyze schemas in parallel for better performance
 		const parallelResults = await infra.parallel.processSchemas(targetSchemas, async (schema) => {
-			const result = await analyzer.analyze(schema as any, {
+			// Run new rule-based analysis
+			const ruleResult = await ruleEngine.analyzeFile(schema.filePath);
+
+			// Also run legacy analyzer for backward compatibility
+			const legacyResult = await analyzer.analyze(schema as any, {
 				mode: mode === 'full' ? 'full' : (mode as any),
 				autoFix: options.autoFix || mode === 'fix',
 				strict: mode === 'check',
 			});
 
+			// Convert rule violations to issues format
+			const ruleIssues = ruleResult.violations.map((v: RuleViolation) => ({
+				type: v.severity,
+				message: v.message,
+				rule: v.schemaName,
+				line: v.line,
+				column: v.column,
+				fix: v.fix,
+				suggestions: v.suggestions,
+			}));
+
 			return {
 				schema: schema.name,
 				file: schema.filePath,
-				...result,
+				score: legacyResult.score,
+				level: legacyResult.level,
+				issues: [...legacyResult.issues, ...ruleIssues],
+				suggestions: [...legacyResult.suggestions, ...(ruleResult.violations.flatMap((v) => v.suggestions || []))],
+				fixes: legacyResult.fixes,
 			};
 		});
 
@@ -161,6 +192,7 @@ export async function analyzeCommand(
 		// Watch mode
 		if (options.watch) {
 			startWatchMode();
+			return; // Stay alive in watch mode
 		}
 
 		// Exit code based on issues
@@ -169,6 +201,9 @@ export async function analyzeCommand(
 		if (hasErrors && mode === 'check') {
 			process.exit(1);
 		}
+
+		// Exit cleanly in non-watch mode
+		process.exit(0);
 	} catch (error) {
 		if (isJsonMode) {
 			console.log(

@@ -226,6 +226,115 @@ export class SchemaGenerator {
 		return output;
 	}
 
+	/**
+	 * Generate Zod schema from DataAnalyzer analysis result
+	 * This is called by the generate command when using --from-json or --from-url
+	 */
+	async generateFromAnalysis(analysis: any, options: any = {}): Promise<any> {
+		return {
+			zodCode: analysis.zodCode || 'import { z } from \'zod\';\n\nexport const GeneratedSchema = z.unknown();',
+			typeCode: analysis.typeCode || 'export type Generated = unknown;',
+			confidence: analysis.confidence || 0,
+			complexity: analysis.complexity || 0,
+			patterns: analysis.patterns || [],
+			suggestions: analysis.suggestions || [],
+		};
+	}
+
+	/**
+	 * Generate Zod schema from database schema (table structure)
+	 * This is called by the generate command when using --from-database
+	 */
+	async generateFromDatabaseSchema(tableSchema: any, options: any = {}): Promise<any> {
+		const name = options.name || 'DatabaseSchema';
+		const columns = tableSchema.columns || [];
+
+		const fields = columns.map((col: any) => {
+			let zodType = 'z.unknown()';
+
+			// Map database types to Zod types
+			switch (col.type) {
+				case 'uuid':
+					zodType = 'z.string().uuid()';
+					break;
+				case 'string':
+				case 'varchar':
+				case 'text':
+					zodType = 'z.string()';
+					break;
+				case 'integer':
+				case 'int':
+					zodType = 'z.number().int()';
+					break;
+				case 'number':
+				case 'decimal':
+				case 'float':
+					zodType = 'z.number()';
+					break;
+				case 'boolean':
+				case 'bool':
+					zodType = 'z.boolean()';
+					break;
+				case 'timestamp':
+				case 'datetime':
+					zodType = 'z.date()';
+					break;
+				default:
+					zodType = 'z.unknown()';
+			}
+
+			// Handle nullable
+			if (col.nullable && !col.primaryKey) {
+				zodType += '.nullable()';
+			}
+
+			return `  ${col.name}: ${zodType}`;
+		});
+
+		const zodCode = `import { z } from 'zod';
+
+export const ${name} = z.object({
+${fields.join(',\n')}
+});`;
+
+		const typeName = name.replace('Schema', '');
+		const typeCode = `export type ${typeName} = z.infer<typeof ${name}>;`;
+
+		return {
+			zodCode,
+			typeCode,
+			tableName: tableSchema.name,
+		};
+	}
+
+	/**
+	 * Generate Zod schema from learned pattern
+	 * This is called by the generate command when using --learn
+	 */
+	async generateFromPattern(pattern: any, options: any = {}): Promise<any> {
+		const name = options.name || 'PatternSchema';
+
+		// Generate schema from pattern structure
+		const zodCode = `import { z } from 'zod';
+
+export const ${name} = z.object({
+  // Pattern: ${pattern.name}
+  // Confidence: ${pattern.confidence}
+  // Occurrences: ${pattern.occurrences}
+  data: z.unknown() // Replace with actual schema based on pattern
+});`;
+
+		const typeName = name.replace('Schema', '');
+		const typeCode = `export type ${typeName} = z.infer<typeof ${name}>;`;
+
+		return {
+			zodCode,
+			typeCode,
+			confidence: pattern.confidence,
+			occurrences: pattern.occurrences,
+		};
+	}
+
 	// === HELPER METHODS ===
 
 	private initializePatterns(): void {
@@ -404,12 +513,198 @@ const ApiResponseSchema = z.object({
 	}
 }
 
+// === MOCK DATA GENERATOR ===
+
+export interface MockConfig {
+	realistic?: boolean;
+	locale?: string;
+	seed?: number;
+	relationships?: boolean;
+	streaming?: boolean;
+	batchSize?: number;
+}
+
+export interface MockTemplate {
+	name: string;
+	generate: () => Promise<any>;
+}
+
+/**
+ * Dedicated mock data generator with faker.js integration
+ */
+export class MockGenerator {
+	private config: MockConfig = {};
+	private templates: Map<string, MockTemplate> = new Map();
+	private fakerInstance: any = null;
+
+	/**
+	 * Configure the mock generator
+	 */
+	async configure(config: MockConfig): Promise<void> {
+		this.config = { ...this.config, ...config };
+
+		// Initialize faker with locale and seed
+		if (!this.fakerInstance) {
+			const { faker } = await import('@faker-js/faker');
+			this.fakerInstance = faker;
+
+			if (config.seed) {
+				this.fakerInstance.seed(config.seed);
+			}
+
+			// Note: Locale would need to be set via importing specific faker instance
+			// For now we use the default en-US
+		}
+	}
+
+	/**
+	 * Load a custom template
+	 */
+	async loadTemplate(templatePath: string): Promise<void> {
+		// For now, just store the path
+		// In a full implementation, we'd load and parse the template file
+		console.log(`Template loaded: ${templatePath}`);
+	}
+
+	/**
+	 * Generate batch of mock data for schemas
+	 */
+	async generateBatch(
+		schemas: any[],
+		count: number,
+		options: { format?: string; preserveRelationships?: boolean } = {}
+	): Promise<any[]> {
+		const results: any[] = [];
+
+		// Ensure faker is configured
+		if (!this.fakerInstance) {
+			await this.configure({});
+		}
+
+		for (const schema of schemas) {
+			for (let i = 0; i < count; i++) {
+				const mockData = await this.generateFromSchema(schema);
+				results.push(mockData);
+			}
+		}
+
+		// Format results based on options
+		if (options.format === 'typescript') {
+			return results.map(r => `export const mockData = ${JSON.stringify(r, null, 2)};`);
+		}
+		if (options.format === 'csv') {
+			return this.convertToCSV(results);
+		}
+		if (options.format === 'sql') {
+			return this.convertToSQL(results, schemas[0]?.name || 'table');
+		}
+
+		return results;
+	}
+
+	/**
+	 * Generate mock data from a schema definition
+	 */
+	private async generateFromSchema(schema: any): Promise<any> {
+		const faker = this.fakerInstance;
+		const mockData: any = {};
+
+		// Parse schema structure and generate appropriate mock data
+		// This is a simplified implementation
+		const schemaName = schema.name || 'Schema';
+		const schemaType = schemaName.toLowerCase();
+
+		// Pattern-based generation
+		if (schemaType.includes('user')) {
+			mockData.id = faker.string.uuid();
+			mockData.email = faker.internet.email();
+			mockData.name = faker.person.fullName();
+			mockData.age = faker.number.int({ min: 18, max: 80 });
+			mockData.createdAt = faker.date.past();
+		} else if (schemaType.includes('product')) {
+			mockData.id = faker.string.uuid();
+			mockData.name = faker.commerce.productName();
+			mockData.description = faker.commerce.productDescription();
+			mockData.price = parseFloat(faker.commerce.price());
+			mockData.quantity = faker.number.int({ min: 0, max: 1000 });
+		} else if (schemaType.includes('post') || schemaType.includes('blog')) {
+			mockData.id = faker.string.uuid();
+			mockData.title = faker.lorem.sentence();
+			mockData.content = faker.lorem.paragraphs(3);
+			mockData.author = faker.person.fullName();
+			mockData.createdAt = faker.date.past();
+		} else {
+			// Generic fallback
+			mockData.id = faker.string.uuid();
+			mockData.name = faker.lorem.word();
+			mockData.value = faker.lorem.sentence();
+			mockData.timestamp = faker.date.recent();
+		}
+
+		return mockData;
+	}
+
+	/**
+	 * Convert results to CSV format
+	 */
+	private convertToCSV(results: any[]): string[] {
+		if (results.length === 0) return [];
+
+		const headers = Object.keys(results[0]);
+		const csvLines = [headers.join(',')];
+
+		for (const row of results) {
+			const values = headers.map(h => {
+				const value = row[h];
+				if (typeof value === 'string' && value.includes(',')) {
+					return `"${value}"`;
+				}
+				return value;
+			});
+			csvLines.push(values.join(','));
+		}
+
+		return [csvLines.join('\n')];
+	}
+
+	/**
+	 * Convert results to SQL INSERT statements
+	 */
+	private convertToSQL(results: any[], tableName: string): string[] {
+		if (results.length === 0) return [];
+
+		const sqlStatements: string[] = [];
+		const headers = Object.keys(results[0]);
+
+		for (const row of results) {
+			const values = headers.map(h => {
+				const value = row[h];
+				if (typeof value === 'string') {
+					return `'${value.replace(/'/g, "''")}'`;
+				}
+				if (value instanceof Date) {
+					return `'${value.toISOString()}'`;
+				}
+				if (value === null) {
+					return 'NULL';
+				}
+				return value;
+			});
+
+			sqlStatements.push(
+				`INSERT INTO ${tableName} (${headers.join(', ')}) VALUES (${values.join(', ')});`
+			);
+		}
+
+		return sqlStatements;
+	}
+}
+
 // === EXPORTS FOR BACKWARD COMPATIBILITY ===
 
 export { SchemaGenerator as ScaffoldEngine };
-export { SchemaGenerator as MockGenerator };
 export { SchemaGenerator as DocsGenerator };
-export { SchemaGenerator as AIRulesGenerator };
+export { SchemaGenerator as AIRulesGenerator};
 
 export const createSchemaGenerator = () => new SchemaGenerator();
 

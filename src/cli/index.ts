@@ -35,6 +35,7 @@ const mockCommand = lazyImport(() => import('./commands/mock'));
 const docsCommand = lazyImport(() => import('./commands/docs'));
 const testCommand = lazyImport(() => import('./commands/test'));
 const migrateCommand = lazyImport(() => import('./commands/migrate'));
+const diffCommand = lazyImport(() => import('./commands/diff'));
 // Temporarily disabled - commands not yet implemented
 // const refactorCommand = lazyImport(() => import('./commands/refactor'));
 // const transformCommand = lazyImport(() => import('./commands/transform'));
@@ -49,8 +50,13 @@ const mapCommand = lazyImport(() => import('./commands/map'));
 const dashboardCommand = lazyImport(() => import('./commands/dashboard'));
 const setupCommand = lazyImport(() => import('./commands/setup'));
 
-// Simple aliases
-const hintCommand = analyzeCommand; // Use direct reference for core commands
+// Simple aliases with proper argument handling
+const hintCommand = async (patterns?: string | string[], options?: any, command?: Command) => {
+	// hint takes patterns array, but analyze expects target string
+	// If patterns is provided, use the first pattern as target, or undefined if it's an array
+	const target = Array.isArray(patterns) ? undefined : patterns;
+	return analyzeCommand(target, { ...options, mode: 'hint' }, command);
+};
 const contractCommand = setupCommand;
 const _profileCommand = analyzeCommand;
 
@@ -137,6 +143,7 @@ program.addCommand(CommandConfigs.contract().action(contractCommand).build());
 
 // Transformation Commands
 program.addCommand(CommandConfigs.migrate().action(migrateCommand).build());
+program.addCommand(CommandConfigs.diff().action(diffCommand).build());
 // Temporarily disabled - commands not yet implemented
 // program.addCommand(CommandConfigs.refactor().action(refactorCommand).build());
 // program.addCommand(CommandConfigs.compose().action(composeCommand).build());

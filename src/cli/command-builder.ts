@@ -199,7 +199,21 @@ export const CommandConfigs = {
 		createCommand('migrate', 'Schema migration and evolution', 'transformation')
 			.argument('[action]', 'migration action')
 			.option('--from <path>', 'source schema file path')
-			.option('--to <path>', 'target schema file path'),
+			.option('--to <path>', 'target schema file path')
+			.option('--include <patterns...>', 'file patterns to include')
+			.option('--exclude <patterns...>', 'file patterns to exclude')
+			.option('--version <version>', 'default version for metadata', '1.0.0')
+			.option('--interactive', 'enable interactive mode with prompts'),
+
+	diff: () =>
+		createCommand('diff', 'Compare schemas and detect breaking changes', 'transformation')
+			.option('--old <path>', 'old schema version file path (required)')
+			.option('--new <path>', 'new schema version file path (required)')
+			.option('--output <path>', 'output file for diff report')
+			.option('--format <format>', 'output format: text, json, markdown, html', 'text')
+			.option('--migration', 'generate migration guide', true)
+			.option('--strict', 'enable strict comparison mode')
+			.option('--ignore-metadata', 'ignore metadata changes'),
 
 	refactor: () =>
 		createCommand('refactor', 'Smart schema refactoring', 'transformation')
@@ -257,12 +271,20 @@ export const CommandConfigs = {
 			.option('--no-interactive', 'disable interactive mode'),
 
 	docs: () =>
-		createCommand('docs', 'Generate documentation from Zod schemas', 'generation')
+		createCommand('docs', 'Generate comprehensive documentation from Zod schemas', 'generation')
 			.option('-o, --output <path>', 'output directory for documentation', './docs/schemas')
-			.option('-f, --format <format>', 'output format: markdown, html, json', 'markdown')
+			.option(
+				'-f, --format <format>',
+				'output format: markdown, html, json-schema, openapi, all',
+				'markdown',
+			)
 			.option('--include <patterns...>', 'file patterns to include')
 			.option('--exclude <patterns...>', 'file patterns to exclude')
-			.option('--title <title>', 'documentation title'),
+			.option('--title <title>', 'documentation title')
+			.option('--group-by-category', 'group schemas by category', true)
+			.option('--validate-examples', 'validate examples in metadata')
+			.option('--generate-paths', 'generate API paths for OpenAPI', true)
+			.option('--servers <urls...>', 'server URLs for OpenAPI'),
 
 	watch: () =>
 		createCommand('watch', 'Watch for schema changes and hot reload automatically', 'basic')

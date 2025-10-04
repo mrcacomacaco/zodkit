@@ -339,4 +339,6 @@ function displayMockResults(results: any, schemas: any[], options: MockOptions):
 	console.log(
 		`  With relationships: ${pc.cyan(`zodkit mock ${schemas[0]?.name} --relationships`)}`,
 	);
+
+	process.exit(0);
 }

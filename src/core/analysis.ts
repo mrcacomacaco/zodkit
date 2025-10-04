@@ -589,12 +589,291 @@ export class Analyzer {
 	}
 }
 
+// === DATA ANALYZER ===
+
+export interface DataAnalysisOptions {
+	detectPatterns?: boolean;
+	inferTypes?: boolean;
+	findOptionalFields?: boolean;
+	detectArrayPatterns?: boolean;
+	analyzeComplexity?: boolean;
+	context?: string;
+}
+
+export interface DataAnalysisResult {
+	zodCode: string;
+	typeCode: string;
+	confidence: number;
+	complexity: number;
+	patterns: string[];
+	suggestions: string[];
+	fields: Array<{
+		name: string;
+		type: string;
+		optional: boolean;
+		pattern?: string;
+	}>;
+}
+
+/**
+ * Dedicated data analyzer for JSON pattern detection
+ */
+export class DataAnalyzer {
+	/**
+	 * Analyze JSON data and detect patterns
+	 */
+	async analyzeData(data: any, options: DataAnalysisOptions = {}): Promise<DataAnalysisResult> {
+		const patterns: string[] = [];
+		const fields: DataAnalysisResult['fields'] = [];
+		const suggestions: string[] = [];
+
+		// Analyze object structure
+		if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+			for (const [key, value] of Object.entries(data)) {
+				const fieldAnalysis = this.analyzeField(key, value, options);
+				fields.push(fieldAnalysis);
+				if (fieldAnalysis.pattern) {
+					patterns.push(`${key}: ${fieldAnalysis.pattern}`);
+				}
+			}
+		}
+
+		// Generate Zod schema code
+		const zodCode = this.generateZodCode(fields, options.context || 'Data');
+		const typeCode = this.generateTypeCode(options.context || 'Data');
+
+		// Calculate confidence based on pattern detection
+		const confidence = patterns.length / Math.max(fields.length, 1);
+
+		// Calculate complexity
+		const complexity = this.calculateComplexity(fields);
+
+		// Generate suggestions
+		if (fields.some(f => !f.pattern)) {
+			suggestions.push('Consider adding specific validations for fields without patterns');
+		}
+		if (complexity > 5) {
+			suggestions.push('Consider breaking down complex schema into smaller schemas');
+		}
+
+		return {
+			zodCode,
+			typeCode,
+			confidence,
+			complexity,
+			patterns,
+			suggestions,
+			fields,
+		};
+	}
+
+	private analyzeField(key: string, value: any, options: DataAnalysisOptions): DataAnalysisResult['fields'][0] {
+		const lowerKey = key.toLowerCase();
+		let type: string = typeof value;
+		let pattern: string | undefined;
+		let zodType = 'z.unknown()';
+
+		if (value === null) {
+			type = 'null';
+			zodType = 'z.null()';
+		} else if (Array.isArray(value)) {
+			type = 'array';
+			const elementType = value.length > 0 ? typeof value[0] : 'unknown';
+			zodType = `z.array(z.${elementType}())`;
+			if (value.length > 0) {
+				pattern = `array of ${elementType}`;
+			}
+		} else if (type === 'string' && options.detectPatterns) {
+			// Email pattern
+			if (lowerKey.includes('email') || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+				pattern = 'email';
+				zodType = 'z.string().email()';
+			}
+			// URL pattern
+			else if (lowerKey.includes('url') || lowerKey.includes('link') || /^https?:\/\//.test(value)) {
+				pattern = 'url';
+				zodType = 'z.string().url()';
+			}
+			// UUID pattern
+			else if (lowerKey.includes('uuid') || lowerKey === 'id' || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+				pattern = 'uuid';
+				zodType = 'z.string().uuid()';
+			}
+			// Date pattern
+			else if (lowerKey.includes('date') || lowerKey.includes('time') || /^\d{4}-\d{2}-\d{2}/.test(value)) {
+				pattern = 'date';
+				zodType = 'z.string().datetime()';
+			}
+			// Phone pattern
+			else if (lowerKey.includes('phone') || lowerKey.includes('mobile')) {
+				pattern = 'phone';
+				zodType = 'z.string()';
+			}
+			else {
+				zodType = 'z.string()';
+			}
+		} else if (type === 'number') {
+			if (Number.isInteger(value)) {
+				zodType = 'z.number().int()';
+				pattern = 'integer';
+			} else {
+				zodType = 'z.number()';
+				pattern = 'float';
+			}
+		} else if (type === 'boolean') {
+			zodType = 'z.boolean()';
+		} else if (type === 'object') {
+			zodType = 'z.object({})';
+			pattern = 'nested object';
+		}
+
+		return {
+			name: key,
+			type: zodType,
+			optional: value === null || value === undefined,
+			pattern,
+		};
+	}
+
+	private generateZodCode(fields: DataAnalysisResult['fields'], schemaName: string): string {
+		const fieldLines = fields.map(f => {
+			const optional = f.optional ? '.optional()' : '';
+			return `  ${f.name}: ${f.type}${optional},`;
+		});
+
+		return `import { z } from 'zod';\n\nexport const ${schemaName}Schema = z.object({\n${fieldLines.join('\n')}\n});`;
+	}
+
+	private generateTypeCode(schemaName: string): string {
+		return `\nexport type ${schemaName} = z.infer<typeof ${schemaName}Schema>;`;
+	}
+
+	private calculateComplexity(fields: DataAnalysisResult['fields']): number {
+		let complexity = fields.length;
+
+		// Add complexity for nested objects and arrays
+		for (const field of fields) {
+			if (field.type.includes('object') || field.type.includes('array')) {
+				complexity += 2;
+			}
+			if (field.pattern) {
+				complexity += 0.5;
+			}
+		}
+
+		return Math.round(complexity * 10) / 10;
+	}
+}
+
+// === API INSPECTOR ===
+
+export interface APIResponse {
+	method: string;
+	endpoint: string;
+	status: number;
+	data: any;
+	headers: Record<string, string>;
+}
+
+export interface APIInspectOptions {
+	methods?: string[];
+	sampleCount?: number;
+	timeout?: number;
+	followRedirects?: boolean;
+	headers?: Record<string, string>;
+}
+
+/**
+ * API endpoint inspector with real fetch implementation
+ */
+export class APIInspector {
+	/**
+	 * Inspect API endpoints and gather response data
+	 */
+	async inspectAPI(url: string, options: APIInspectOptions = {}): Promise<APIResponse[]> {
+		const responses: APIResponse[] = [];
+		const methods = options.methods || ['GET'];
+		const sampleCount = options.sampleCount || 1;
+		const timeout = options.timeout || 10000;
+		const headers = options.headers || {};
+
+		for (const method of methods) {
+			for (let i = 0; i < sampleCount; i++) {
+				try {
+					const controller = new AbortController();
+					const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+					const response = await fetch(url, {
+						method,
+						headers: {
+							'Accept': 'application/json',
+							'User-Agent': 'ZodKit-API-Inspector/1.0',
+							...headers,
+						},
+						signal: controller.signal,
+						redirect: options.followRedirects ? 'follow' : 'manual',
+					});
+
+					clearTimeout(timeoutId);
+
+					// Extract response headers
+					const responseHeaders: Record<string, string> = {};
+					response.headers.forEach((value, key) => {
+						responseHeaders[key] = value;
+					});
+
+					// Parse response body
+					let data: any;
+					const contentType = response.headers.get('content-type') || '';
+
+					if (contentType.includes('application/json')) {
+						data = await response.json();
+					} else if (contentType.includes('text/')) {
+						data = await response.text();
+					} else {
+						// For binary or unknown content, just store metadata
+						data = {
+							_type: 'binary',
+							_contentType: contentType,
+							_size: response.headers.get('content-length') || 'unknown',
+						};
+					}
+
+					responses.push({
+						method,
+						endpoint: url,
+						status: response.status,
+						data,
+						headers: responseHeaders,
+					});
+
+				} catch (error) {
+					// Handle errors (network issues, timeouts, etc.)
+					const errorMessage = error instanceof Error ? error.message : String(error);
+
+					responses.push({
+						method,
+						endpoint: url,
+						status: 0,
+						data: {
+							_error: true,
+							_message: errorMessage,
+							_type: error instanceof Error && error.name === 'AbortError' ? 'timeout' : 'network_error',
+						},
+						headers: {},
+					});
+				}
+			}
+		}
+
+		return responses;
+	}
+}
+
 // === EXPORTS FOR BACKWARD COMPATIBILITY ===
 
 export { Analyzer as ComplexityAnalyzer };
 export { Analyzer as RuleEngine };
-export { Analyzer as APIInspector };
-export { Analyzer as DataAnalyzer };
 export { Analyzer as HintEngine };
 
 export const createAnalyzer = () => new Analyzer();

@@ -3,7 +3,9 @@ import * as path from 'node:path';
 import type { Command } from 'commander';
 import inquirer from 'inquirer';
 import * as pc from 'picocolors';
+import { Project } from 'ts-morph';
 import type { z } from 'zod';
+import { DescribeToMetaMigrator, type MigrationOptions as DescribeToMetaOptions } from '../../core/migration/describe-to-meta';
 import { SchemaTransformer } from '../../core/schema-transformation';
 
 // Type definitions for migration
@@ -53,6 +55,8 @@ interface MigrateOptions {
 	report?: boolean;
 	export?: string;
 	import?: string;
+	include?: string[];
+	exclude?: string[];
 }
 
 export async function migrateCommand(
@@ -69,6 +73,9 @@ export async function migrateCommand(
 
 	try {
 		switch (action) {
+			case 'describe-to-meta':
+				await handleDescribeToMeta(options, isJsonMode);
+				break;
 			case 'create':
 				await handleCreate(assistant, options, isJsonMode);
 				break;
@@ -132,6 +139,300 @@ export async function migrateCommand(
 		}
 		process.exit(1);
 	}
+}
+
+/**
+ * Handle describe-to-meta migration
+ */
+async function handleDescribeToMeta(
+	options: MigrateOptions,
+	isJsonMode: boolean,
+): Promise<void> {
+	const patterns = options.include || ['**/*.schema.ts', '**/schemas/**/*.ts', '**/types/**/*.ts'];
+	const basePath = process.cwd();
+
+	if (!isJsonMode) {
+		console.log(pc.blue('\n🔄 Describe-to-Meta Migration\n'));
+		console.log(`${pc.gray('Scanning patterns:')} ${patterns.join(', ')}`);
+	}
+
+	// Initialize ts-morph project
+	const project = new Project({
+		tsConfigFilePath: path.join(basePath, 'tsconfig.json'),
+		skipAddingFilesFromTsConfig: true,
+	});
+
+	// Add source files based on patterns
+	const sourceFiles = project.addSourceFilesAtPaths(patterns);
+
+	if (sourceFiles.length === 0) {
+		if (!isJsonMode) {
+			console.log(pc.yellow('No TypeScript files found matching patterns.'));
+		}
+		return;
+	}
+
+	if (!isJsonMode) {
+		console.log(`${pc.gray('Found')} ${pc.cyan(sourceFiles.length)} ${pc.gray('file(s) to analyze\n')}`);
+	}
+
+	// Create migrator
+	const migratorOptions: DescribeToMetaOptions = {
+		inferMetadata: options.interactive ? undefined : true,
+		generateExamples: false,
+		addVersion: true,
+		defaultVersion: options.version || '1.0.0',
+		preserveOriginal: false,
+	};
+
+	const migrator = new DescribeToMetaMigrator(migratorOptions);
+
+	// Migrate each file
+	const allMigrations: any[] = [];
+	const filesWithChanges: string[] = [];
+
+	for (const sourceFile of sourceFiles) {
+		const result = migrator.migrateFile(sourceFile);
+
+		if (result.hasChanges) {
+			allMigrations.push(result);
+			filesWithChanges.push(result.filePath);
+
+			if (!isJsonMode && !options.interactive) {
+				console.log(pc.green(`✓ ${path.relative(basePath, result.filePath)}`));
+				for (const migration of result.migrations) {
+					console.log(`  ${pc.gray('→')} ${migration.schemaName}: ${migration.originalDescribe} → ${migration.newMeta.split('\n')[0]}...`);
+				}
+			}
+		}
+	}
+
+	if (allMigrations.length === 0) {
+		if (!isJsonMode) {
+			console.log(pc.yellow('\nNo .describe() calls found to migrate.'));
+			console.log(pc.gray('All schemas are already using .meta() or have no descriptions.'));
+		}
+		return;
+	}
+
+	// Interactive mode - show preview and ask for confirmation
+	if (options.interactive && !isJsonMode) {
+		console.log(pc.blue(`\n📊 Migration Summary\n`));
+		console.log(`${pc.gray('Files to update:')} ${pc.cyan(allMigrations.length)}`);
+		console.log(`${pc.gray('Total migrations:')} ${pc.cyan(allMigrations.reduce((sum, r) => sum + r.migrationsCount, 0))}\n`);
+
+		// Show detailed preview
+		for (const result of allMigrations) {
+			console.log(pc.blue(`\n📄 ${path.relative(basePath, result.filePath)}`));
+
+			for (const migration of result.migrations) {
+				console.log(`\n  ${pc.cyan(migration.schemaName)} (line ${migration.line})`);
+				console.log(`  ${pc.red('- ' + migration.originalDescribe)}`);
+				console.log(`  ${pc.green('+ ' + migration.newMeta)}`);
+
+				if (migration.suggestions && migration.suggestions.length > 0) {
+					console.log(`  ${pc.gray('Suggestions:')}`);
+					for (const suggestion of migration.suggestions) {
+						console.log(`    ${pc.gray('•')} ${suggestion.type}: ${JSON.stringify(suggestion.value)} (${Math.round(suggestion.confidence * 100)}% confidence)`);
+					}
+				}
+			}
+		}
+
+		// Ask for confirmation
+		const { proceed } = await inquirer.prompt([
+			{
+				type: 'confirm',
+				name: 'proceed',
+				message: 'Apply these migrations?',
+				default: true,
+			},
+		]);
+
+		if (!proceed) {
+			console.log(pc.yellow('\nMigration cancelled.'));
+			return;
+		}
+
+		// Ask about enhancement options
+		const { enhance } = await inquirer.prompt([
+			{
+				type: 'confirm',
+				name: 'enhance',
+				message: 'Would you like to add enhanced metadata (examples, custom properties)?',
+				default: false,
+			},
+		]);
+
+		if (enhance) {
+			await handleEnhancementPrompts(allMigrations, project);
+		}
+	}
+
+	// Apply migrations if not dry-run
+	if (!options.dryRun) {
+		for (const result of allMigrations) {
+			const sourceFile = project.getSourceFile(result.filePath);
+			if (sourceFile) {
+				migrator.applyMigrations(sourceFile, result.migrations);
+			}
+		}
+
+		// Save all changes
+		await project.save();
+
+		if (!isJsonMode) {
+			console.log(pc.green(`\n✅ Successfully migrated ${allMigrations.length} file(s)!`));
+			console.log(`${pc.gray('Total schemas updated:')} ${pc.cyan(allMigrations.reduce((sum, r) => sum + r.migrationsCount, 0))}`);
+		}
+	} else {
+		if (!isJsonMode) {
+			console.log(pc.yellow('\n🧪 Dry run complete - no files were modified.'));
+		}
+	}
+
+	// JSON output
+	if (isJsonMode) {
+		console.log(
+			JSON.stringify(
+				{
+					action: 'describe-to-meta',
+					success: true,
+					filesScanned: sourceFiles.length,
+					filesWithChanges: allMigrations.length,
+					totalMigrations: allMigrations.reduce((sum, r) => sum + r.migrationsCount, 0),
+					dryRun: options.dryRun === true,
+					migrations: allMigrations,
+				},
+				null,
+				2,
+			),
+		);
+	}
+}
+
+/**
+ * Handle enhancement prompts for metadata
+ */
+async function handleEnhancementPrompts(
+	migrations: any[],
+	project: any,
+): Promise<void> {
+	console.log(pc.blue('\n✨ Enhanced Metadata Configuration\n'));
+
+	for (const result of migrations) {
+		for (const migration of result.migrations) {
+			console.log(pc.cyan(`\n📝 ${migration.schemaName}`));
+			console.log(pc.gray(`Current metadata: ${Object.keys(migration.newMeta.match(/\{([^}]+)\}/)?.[1] || '').length} fields`));
+
+			const enhancements = await inquirer.prompt([
+				{
+					type: 'input',
+					name: 'id',
+					message: '  Unique ID (optional, e.g., user-profile-v1):',
+					default: '',
+				},
+				{
+					type: 'input',
+					name: 'customTitle',
+					message: '  Custom title (leave blank to keep inferred):',
+					default: '',
+				},
+				{
+					type: 'input',
+					name: 'customCategory',
+					message: '  Custom category (leave blank to keep inferred):',
+					default: '',
+				},
+				{
+					type: 'input',
+					name: 'tags',
+					message: '  Additional tags (comma-separated):',
+					default: '',
+				},
+				{
+					type: 'confirm',
+					name: 'addExamples',
+					message: '  Add example values?',
+					default: false,
+				},
+			]);
+
+			if (enhancements.addExamples) {
+				const { exampleJson } = await inquirer.prompt([
+					{
+						type: 'editor',
+						name: 'exampleJson',
+						message: 'Enter example JSON (will open in editor):',
+						default: '{\n  \n}',
+					},
+				]);
+
+				try {
+					const example = JSON.parse(exampleJson);
+					migration.enhancedMetadata = {
+						...migration.enhancedMetadata,
+						examples: [example],
+					};
+				} catch (error) {
+					console.log(pc.yellow('  ⚠️  Invalid JSON, skipping example'));
+				}
+			}
+
+			// Apply enhancements
+			if (enhancements.id || enhancements.customTitle || enhancements.customCategory || enhancements.tags) {
+				const sourceFile = project.getSourceFile(result.filePath);
+				if (sourceFile) {
+					const varDecl = sourceFile.getVariableDeclaration(migration.schemaName);
+					if (varDecl) {
+						const initializer = varDecl.getInitializer();
+						if (initializer) {
+							// Parse existing .meta() call
+							const metaMatch = initializer.getText().match(/\.meta\(\{([^}]+)\}\)/);
+							if (metaMatch) {
+								const metaContent = metaMatch[1];
+								const metaLines = metaContent.split(',').map(line => line.trim());
+
+								// Build enhanced metadata
+								const enhancedMeta: any = {};
+								for (const line of metaLines) {
+									const [key, value] = line.split(':').map(s => s.trim());
+									if (key && value) {
+										enhancedMeta[key] = value.replace(/['"]/g, '');
+									}
+								}
+
+								// Apply enhancements
+								if (enhancements.id) enhancedMeta.id = `"${enhancements.id}"`;
+								if (enhancements.customTitle) enhancedMeta.title = `"${enhancements.customTitle}"`;
+								if (enhancements.customCategory) enhancedMeta.category = `"${enhancements.customCategory}"`;
+								if (enhancements.tags) {
+									const tags = enhancements.tags.split(',').map((t: string) => t.trim());
+									enhancedMeta.tags = `[${tags.map(t => `"${t}"`).join(', ')}]`;
+								}
+								if (migration.enhancedMetadata?.examples) {
+									enhancedMeta.examples = JSON.stringify(migration.enhancedMetadata.examples);
+								}
+
+								// Format new .meta() call
+								const metaEntries = Object.entries(enhancedMeta).map(
+									([key, value]) => `  ${key}: ${value}`
+								);
+								const newMetaCall = `.meta({\n${metaEntries.join(',\n')},\n})`;
+
+								// Update migration
+								migration.newMeta = newMetaCall;
+
+								console.log(pc.green('  ✓ Enhanced metadata applied'));
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	console.log(pc.green('\n✅ All enhancements configured!'));
 }
 
 async function handleCreate(
@@ -1508,33 +1809,40 @@ async function showHelp(): Promise<void> {
 	console.log(pc.blue('\n🔄 Schema Migration Assistant\n'));
 
 	console.log(pc.blue('Available Commands:'));
-	console.log('  create       Create new migration from schema changes');
-	console.log('  analyze      Analyze compatibility and impact');
-	console.log('  validate     Validate migration before execution');
-	console.log('  execute      Execute migration (with optional dry-run)');
-	console.log('  rollback     Rollback completed migration');
-	console.log('  list         List all migrations');
-	console.log('  show         Show detailed migration information');
-	console.log('  status       Show migration status overview');
-	console.log('  plan         Create evolution plan for complex changes');
-	console.log('  report       Generate detailed migration report');
-	console.log('  interactive  Interactive migration management');
+	console.log('  describe-to-meta  Migrate .describe() calls to .meta() with enhanced metadata');
+	console.log('  create            Create new migration from schema changes');
+	console.log('  analyze           Analyze compatibility and impact');
+	console.log('  validate          Validate migration before execution');
+	console.log('  execute           Execute migration (with optional dry-run)');
+	console.log('  rollback          Rollback completed migration');
+	console.log('  list              List all migrations');
+	console.log('  show              Show detailed migration information');
+	console.log('  status            Show migration status overview');
+	console.log('  plan              Create evolution plan for complex changes');
+	console.log('  report            Generate detailed migration report');
+	console.log('  interactive       Interactive migration management');
 
 	console.log(pc.blue('\nCommon Options:'));
-	console.log('  --from       Source schema file path');
-	console.log('  --to         Target schema file path');
-	console.log('  --name       Migration ID or name');
-	console.log('  --strategy   Migration strategy (gradual, immediate, etc.)');
-	console.log('  --dry-run    Simulate execution without applying changes');
-	console.log('  --force      Force execution without confirmations');
-	console.log('  --format     Output format (json, console, table, detailed)');
+	console.log('  --from         Source schema file path');
+	console.log('  --to           Target schema file path');
+	console.log('  --name         Migration ID or name');
+	console.log('  --strategy     Migration strategy (gradual, immediate, etc.)');
+	console.log('  --dry-run      Simulate execution without applying changes');
+	console.log('  --force        Force execution without confirmations');
+	console.log('  --format       Output format (json, console, table, detailed)');
+	console.log('  --interactive  Enable interactive mode with prompts');
+	console.log('  --include      File patterns to include (for describe-to-meta)');
+	console.log('  --version      Default version for metadata (default: 1.0.0)');
 
 	console.log(pc.blue('\nExamples:'));
-	console.log('  zodded migrate create --from ./old-schema.ts --to ./new-schema.ts');
-	console.log('  zodded migrate analyze --from ./v1.ts --to ./v2.ts');
-	console.log('  zodded migrate execute --name mig_abc123 --dry-run');
-	console.log('  zodded migrate rollback --name mig_abc123 --reason "Critical bug"');
-	console.log('  zodded migrate interactive');
+	console.log('  zodkit migrate describe-to-meta --interactive');
+	console.log('  zodkit migrate describe-to-meta --dry-run');
+	console.log('  zodkit migrate describe-to-meta --include "src/**/*.ts"');
+	console.log('  zodkit migrate create --from ./old-schema.ts --to ./new-schema.ts');
+	console.log('  zodkit migrate analyze --from ./v1.ts --to ./v2.ts');
+	console.log('  zodkit migrate execute --name mig_abc123 --dry-run');
+	console.log('  zodkit migrate rollback --name mig_abc123 --reason "Critical bug"');
+	console.log('  zodkit migrate interactive');
 
 	console.log();
 }

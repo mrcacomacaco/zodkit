@@ -111,30 +111,69 @@ export async function watchCommand(options: WatchOptions = {}, _command?: Comman
 
 		console.log(`\n${pc.gray('Press Ctrl+C to stop watching...')}\n`);
 
+		// Track all active timers and intervals for cleanup
+		const activeTimers: Set<NodeJS.Timeout> = new Set();
+		let isShuttingDown = false;
+
+		// Keep the process alive with tracked timeout
+		const keepAlive = () => {
+			if (isShuttingDown) return;
+			const timeout = setTimeout(() => {
+				activeTimers.delete(timeout);
+				keepAlive();
+			}, 1000);
+			activeTimers.add(timeout);
+		};
+		keepAlive();
+
 		// Handle graceful shutdown
 		const shutdown = async () => {
+			if (isShuttingDown) return;
+			isShuttingDown = true;
+
 			logger.info('Shutting down hot reload system...');
 
+			// Clear all active timers immediately
+			activeTimers.forEach((timer) => clearTimeout(timer));
+			activeTimers.clear();
+
 			try {
-				await hotReloadManager.stop();
-				await infrastructure.shutdown?.();
+				// Stop hot reload manager with timeout
+				await Promise.race([
+					hotReloadManager.stop(),
+					new Promise((_, reject) =>
+						setTimeout(() => reject(new Error('Hot reload stop timeout')), 2000)
+					),
+				]).catch((err) => {
+					if (options.verbose) logger.debug('Hot reload stop error:', err);
+				});
+
+				// Shutdown infrastructure with timeout
+				if (infrastructure.shutdown) {
+					await Promise.race([
+						infrastructure.shutdown(),
+						new Promise((_, reject) =>
+							setTimeout(() => reject(new Error('Infrastructure shutdown timeout')), 2000)
+						),
+					]).catch((err) => {
+						if (options.verbose) logger.debug('Infrastructure shutdown error:', err);
+					});
+				}
 
 				console.log(`\n${pc.green('✅ Hot reload system stopped gracefully')}`);
-				process.exit(0);
 			} catch (error) {
-				logger.error('Error during shutdown:', error);
-				process.exit(1);
+				if (options.verbose) {
+					logger.error('Error during shutdown:', error);
+				}
+			} finally {
+				// Force exit immediately - no setTimeout needed
+				process.exit(0);
 			}
 		};
 
-		process.on('SIGINT', shutdown);
-		process.on('SIGTERM', shutdown);
-
-		// Keep the process alive
-		const keepAlive = () => {
-			setTimeout(keepAlive, 1000);
-		};
-		keepAlive();
+		// Register shutdown handlers
+		process.once('SIGINT', shutdown);
+		process.once('SIGTERM', shutdown);
 	} catch (error) {
 		console.error(`${pc.red('❌ Failed to start hot reload system:')}`);
 		console.error(error instanceof Error ? error.message : String(error));
@@ -216,3 +255,5 @@ function setupEventHandlers(hotReloadManager: HotReloadManager, logger: Logger):
 		}
 	}, 30000); // Every 30 seconds
 }
+
+export default watchCommand;

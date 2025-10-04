@@ -26,6 +26,9 @@ import { z } from 'zod';
 import { MemoryOptimizer, StreamingProcessor } from './memory-optimizer';
 import { ProgressiveLoader, type ProgressiveLoadingOptions } from './progressive-loader';
 import type { SchemaInfo } from './types';
+import { createASTParser } from './ast/parser';
+import { createZodExtractor } from './ast/extractor';
+import { createCollector } from './metadata/collector';
 
 // === UNIFIED TYPES ===
 
@@ -42,6 +45,7 @@ export interface InfrastructureConfig {
 		patterns: string[];
 		exclude: string[];
 		depth: number;
+		useAST?: boolean; // Use TypeScript AST parsing instead of regex
 	};
 	parallel?: {
 		workers: number;
@@ -78,6 +82,7 @@ export class SchemaDiscovery {
 	private readonly cache: SchemaCache;
 	private readonly patterns: string[];
 	private readonly progressiveLoader?: ProgressiveLoader;
+	private readonly useAST: boolean;
 
 	constructor(
 		config: InfrastructureConfig = {},
@@ -88,6 +93,7 @@ export class SchemaDiscovery {
 		this.config = config;
 		this.cache = cache ?? new SchemaCache(config);
 		this.patterns = config.discovery?.patterns ?? this.getSmartDefaultPatterns();
+		this.useAST = config.discovery?.useAST ?? true; // Default to AST-based parsing
 
 		// Initialize progressive loader if configured
 		if (config.progressive && monitor && logger) {
@@ -294,9 +300,52 @@ export class SchemaDiscovery {
 	}
 
 	private parseSchemas(content: string, filePath: string): SchemaInfo[] {
+		// Use AST-based parsing if enabled
+		if (this.useAST) {
+			return this.parseSchemasAST(content, filePath);
+		}
+
+		// Fall back to regex-based parsing
+		return this.parseSchemasRegex(content, filePath);
+	}
+
+	private parseSchemasAST(content: string, filePath: string): SchemaInfo[] {
+		try {
+			const parser = createASTParser({ skipFileDependencyResolution: true });
+			const extractor = createZodExtractor();
+			const collector = createCollector();
+
+			// Create source file from content
+			const sourceFile = parser.createSourceFile(filePath, content);
+
+			// Extract Zod schemas
+			const zodSchemas = extractor.extractSchemas(sourceFile);
+
+			// Convert to SchemaInfo format
+			return zodSchemas.map((schema) => {
+				const enriched = collector.enrichSchema(schema);
+				return {
+					name: schema.name,
+					exportName: schema.name,
+					filePath: schema.filePath,
+					line: schema.line,
+					column: schema.column,
+					schemaType: schema.schemaType,
+					zodChain: schema.type,
+					description: enriched.description,
+					metadata: enriched,
+				};
+			});
+		} catch (error) {
+			console.warn(`AST parsing failed for ${filePath}, falling back to regex:`, error);
+			return this.parseSchemasRegex(content, filePath);
+		}
+	}
+
+	private parseSchemasRegex(content: string, filePath: string): SchemaInfo[] {
 		const schemas: SchemaInfo[] = [];
 
-		// Simple regex-based parsing (in production, use TypeScript AST)
+		// Simple regex-based parsing (fallback)
 		const schemaPattern = /(?:export\s+)?const\s+(\w+)(?:Schema)?\s*=\s*z\./g;
 
 		let match;
@@ -1395,7 +1444,7 @@ export class Infrastructure {
 			const schemasMap = await this.progressiveLoader.loadSchemas([]);
 			return Array.from(schemasMap.values());
 		}
-		return await (this.discovery as any).discover();
+		return await this.discovery.findSchemas();
 	}
 
 	async discoverSchemasInFile(filePath: string): Promise<SchemaInfo[]> {
@@ -1403,7 +1452,10 @@ export class Infrastructure {
 			const schemasMap = await this.progressiveLoader.loadSchemas([filePath]);
 			return Array.from(schemasMap.values()).filter((schema) => schema.filePath === filePath);
 		}
-		return await (this.discovery as any).discoverInFile(filePath);
+		// Read file and parse schemas from it
+		const fs = await import('node:fs/promises');
+		const content = await fs.readFile(filePath, 'utf-8');
+		return (this.discovery as any).parseSchemas(content, filePath);
 	}
 
 	async invalidateCache(filePath?: string): Promise<void> {
@@ -1433,11 +1485,113 @@ export function createInfrastructure(
 	return new Infrastructure(config);
 }
 
+// === DATABASE CONNECTOR ===
+
+export interface DatabaseSchema {
+	name: string;
+	columns: Array<{
+		name: string;
+		type: string;
+		nullable: boolean;
+		primaryKey?: boolean;
+		foreignKey?: {
+			table: string;
+			column: string;
+		};
+	}>;
+}
+
+export interface DatabaseAnalysisResult {
+	tables: DatabaseSchema[];
+	relationships: Array<{
+		from: { table: string; column: string };
+		to: { table: string; column: string };
+	}>;
+}
+
+/**
+ * Database schema introspection and analysis
+ *
+ * @experimental This feature is EXPERIMENTAL and LIMITED.
+ *
+ * Current Status:
+ * - Returns mock data for demonstration purposes only
+ * - Does NOT connect to real databases
+ * - Does NOT perform actual schema introspection
+ *
+ * Future Plans:
+ * - Full PostgreSQL support via `pg` driver
+ * - MySQL/MariaDB support via `mysql2` driver
+ * - SQLite support via `better-sqlite3`
+ * - Schema caching and change detection
+ * - Automatic migration tracking
+ *
+ * Limitations:
+ * - No real database connectivity
+ * - Returns placeholder data structure
+ * - Cannot detect actual schema changes
+ * - No support for complex relationships
+ * - No transaction support
+ *
+ * Usage:
+ * ```typescript
+ * const connector = new DatabaseConnector();
+ * // Currently returns mock data only - real implementation pending
+ * const result = await connector.analyzeDatabase('postgresql://...');
+ * ```
+ *
+ * @see https://github.com/yourusername/zodkit/issues for planned enhancements
+ */
+export class DatabaseConnector {
+	/**
+	 * Analyze database schema and extract structure
+	 *
+	 * @experimental This method currently returns mock data for demonstration.
+	 * Real database connectivity is planned for future releases.
+	 *
+	 * @param connectionString - Database connection string (currently unused)
+	 * @param options - Analysis options (currently unused)
+	 * @returns Mock database structure for demonstration
+	 *
+	 * @throws Will warn in console that full implementation is pending
+	 */
+	async analyzeDatabase(connectionString: string, options: any = {}): Promise<DatabaseAnalysisResult> {
+		console.warn('⚠️  DatabaseConnector is EXPERIMENTAL - returning mock data only');
+		console.warn('⚠️  Real database connectivity is not yet implemented');
+		console.warn(`⚠️  Requested connection: ${connectionString}`);
+
+		// IMPORTANT: This is mock data for demonstration only
+		// Full implementation requires installing database drivers:
+		// - npm install pg @types/pg (PostgreSQL)
+		// - npm install mysql2 (MySQL)
+		// - npm install better-sqlite3 (SQLite)
+
+		return {
+			tables: [
+				{
+					name: 'users',
+					columns: [
+						{ name: 'id', type: 'uuid', nullable: false, primaryKey: true },
+						{ name: 'email', type: 'string', nullable: false },
+						{ name: 'name', type: 'string', nullable: true },
+						{ name: 'created_at', type: 'timestamp', nullable: false },
+					],
+				},
+			],
+			relationships: [],
+			_meta: {
+				experimental: true,
+				mockData: true,
+				realImplementationPending: true,
+			},
+		} as any;
+	}
+}
+
 // === EXPORTS FOR BACKWARD COMPATIBILITY ===
 
 export { Infrastructure as CommandWrapper };
 export { Infrastructure as ContextManager };
-export { Infrastructure as DatabaseConnector };
 export { Infrastructure as HealthDashboard };
 export { Infrastructure as ImportManager };
 export { Infrastructure as StreamingService };
