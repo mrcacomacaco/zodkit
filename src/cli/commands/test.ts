@@ -723,16 +723,16 @@ function displayTestResult(result: any, verbose: boolean): void {
 		);
 	}
 
-	if (verbose && result?.failures?.length && result.failures.length > 0) {
+	if (verbose && result?.failures && Array.isArray(result.failures) && result.failures.length > 0) {
 		console.log(pc.red('   Failures:'));
 		result.failures.slice(0, 3).forEach((failure: any, i: number) => {
-			console.log(`     ${i + 1}. ${failure.message}`);
-			if (failure.input !== undefined) {
+			console.log(`     ${i + 1}. ${failure?.message || 'Unknown error'}`);
+			if (failure?.input !== undefined) {
 				console.log(`        Input: ${JSON.stringify(failure.input)}`);
 			}
 		});
 
-		if (result?.failures?.length && result.failures.length > 3) {
+		if (result.failures.length > 3) {
 			console.log(`     ... and ${result.failures.length - 3} more`);
 		}
 	}
