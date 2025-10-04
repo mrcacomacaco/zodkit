@@ -142,9 +142,9 @@ export async function lintCommand(
 		// Print summary
 		printSummary(files.length, filteredViolations);
 
-		// Exit with error code if there are errors
+		// Exit with error code if there are errors (skip in test environment)
 		const errorCount = filteredViolations.filter((v) => v.severity === 'error').length;
-		if (errorCount > 0) {
+		if (errorCount > 0 && process.env.NODE_ENV !== 'test') {
 			process.exit(1);
 		}
 	} catch (error) {
@@ -152,7 +152,10 @@ export async function lintCommand(
 			pc.red('❌ Lint command failed:'),
 			error instanceof Error ? error.message : String(error),
 		);
-		process.exit(1);
+		if (process.env.NODE_ENV !== 'test') {
+			process.exit(1);
+		}
+		throw error;
 	}
 }
 

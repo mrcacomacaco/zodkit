@@ -44,6 +44,12 @@ zodkit test
 - **fix** - Auto-fix schema issues (safe/unsafe modes)
 
 #### 🏗️ **Code Generation**
+- **create** - Interactive schema builder with step-by-step prompts
+  - 15+ field types (string, number, email, URL, UUID, date, array, object, enum, etc.)
+  - Field-specific validation rules (min/max, regex, custom refinements)
+  - Optional/nullable field support
+  - Live code preview
+  - Automatic TypeScript type inference
 - **scaffold** - Generate Zod schemas from TypeScript with smart pattern detection
   - Detects emails, URLs, UUIDs, dates, ports, phones automatically
   - Preserves JSDoc comments
@@ -87,6 +93,11 @@ zodkit test
   - Detects missing descriptions, loose objects, z.any() usage, and more
   - Multiple output formats (text, JSON)
   - Severity-based filtering (error, warning, info)
+- **stats** - Comprehensive schema statistics and analysis
+  - Type distribution and complexity metrics
+  - Usage pattern analysis
+  - Hotspot detection for problematic schemas
+  - Actionable recommendations
 - **init** - Project initialization with presets
 
 #### 🤖 **AI Integration**
@@ -95,7 +106,6 @@ zodkit test
 
 ### 🚧 Planned Features (Coming Soon)
 
-- **stats** - Schema statistics and complexity analysis
 - **create** - Interactive schema builder with templates
 - **refactor** - Rename, extract, inline, and simplify schemas
 - **compose** - Combine schemas (union, intersect, merge, extend)
@@ -152,7 +162,48 @@ zodkit fix --unsafe
 zodkit fix --interactive
 ```
 
-#### 4. Generate Zod from TypeScript
+#### 4. Create Schemas Interactively
+
+```bash
+# Launch interactive schema builder
+zodkit create
+
+# With predefined name and output
+zodkit create --name UserProfile --output src/schemas/user-profile.schema.ts
+```
+
+**Interactive Flow:**
+1. **Schema name** - PascalCase schema name
+2. **Description** - Optional schema description
+3. **Add fields** - Add fields one by one:
+   - Field name (camelCase)
+   - Field type (string, number, email, URL, UUID, date, array, object, enum, etc.)
+   - Optional/nullable settings
+   - Validations (min/max, regex, etc.)
+   - Field description
+4. **Preview** - See generated code
+5. **Save** - Save to file
+
+**Example output:**
+```typescript
+import { z } from 'zod';
+
+/**
+ * User profile schema
+ */
+export const UserProfile = z.object({
+  /** User's email address */
+  email: z.string().email(),
+  /** User's full name */
+  name: z.string().min(1).max(100),
+  /** User's age */
+  age: z.number().int().min(0).max(150).optional(),
+});
+
+export type UserProfile = z.infer<typeof UserProfile>;
+```
+
+#### 5. Generate Zod from TypeScript
 
 ```bash
 # Convert a TypeScript file to Zod schemas
@@ -173,7 +224,7 @@ The scaffold command automatically detects patterns:
 - Age fields → `.min(0).max(150)`
 - Password fields → `.min(8).max(100)`
 
-#### 5. Generate Documentation
+#### 6. Generate Documentation
 
 ```bash
 # Markdown documentation (default)
@@ -198,7 +249,7 @@ zodkit docs --format openapi
 - Property tables with constraints
 - Usage examples
 
-#### 6. Test Your Schemas
+#### 7. Test Your Schemas
 
 ```bash
 # Run all tests
@@ -406,6 +457,50 @@ zodkit lint --output lint-report.txt
 - File/line/column locations
 - Summary statistics
 
+#### Analyze Schema Statistics
+
+```bash
+# Generate comprehensive statistics
+zodkit stats
+
+# Analyze specific files
+zodkit stats "src/schemas/**/*.ts"
+
+# Output as JSON
+zodkit stats --format json
+
+# Verbose output with all details
+zodkit stats --verbose
+
+# Skip specific analyses
+zodkit stats --no-complexity
+zodkit stats --no-bundle-impact
+zodkit stats --no-patterns --no-hotspots
+
+# Save report to file
+zodkit stats --output stats-report.txt
+```
+
+**What it provides:**
+- 📊 **Type Distribution**: Breakdown of schema types across your project
+- 📈 **Complexity Metrics**: Average/max depth, field counts, refinement usage
+- 🔥 **Hotspot Detection**: Identifies problematic schemas with severity levels
+- 🎯 **Usage Patterns**: Common validation patterns (email, URL, UUID, etc.)
+- 📦 **Bundle Impact**: Estimated bundle size contribution with optimization tips
+- 💡 **Recommendations**: Actionable suggestions for improvements
+
+**Complexity Analysis:**
+- Detects deeply nested schemas (>3 levels)
+- Identifies schemas with many fields (>15)
+- Tracks refinement and transform usage
+- Flags z.any() and .passthrough() usage
+
+**Bundle Impact Analysis:**
+- Estimates total bundle size contribution (~12KB base Zod + schema overhead)
+- Identifies largest schemas contributing to bundle size
+- Analyzes size impact of refinements, transforms, and validations
+- Provides optimization tips for reducing bundle size
+
 #### Sync with External Sources
 
 ```bash
@@ -505,6 +600,7 @@ zodkit test --suite validation       # For validation checks
 
 | Command | Description | Options |
 |---------|-------------|---------|
+| `zodkit create` | Interactive schema builder | `--name <name>`, `--output <path>`, `--no-interactive` |
 | `zodkit scaffold <file>` | TypeScript → Zod conversion | `--output <file>`, `--dry-run` |
 | `zodkit generate mock <schema>` | Generate mock data | `--count <n>`, `--format <json\|ts\|csv\|sql>`, `--output <file>` |
 
@@ -512,6 +608,8 @@ zodkit test --suite validation       # For validation checks
 
 | Command | Description | Options |
 |---------|-------------|---------|
+| `zodkit lint [patterns...]` | Lint schemas for best practices | `--fix`, `--severity <level>`, `--format <text\|json>` |
+| `zodkit stats [patterns...]` | Generate schema statistics | `--format <text\|json>`, `--verbose`, `--no-complexity`, `--no-bundle-impact`, `--output <file>` |
 | `zodkit migrate describe-to-meta` | Migrate .describe() to .meta() | `--dry-run`, `--interactive` |
 | `zodkit sync` | Sync with external sources | `--target <database\|api\|types>` |
 | `zodkit map [schema]` | View schema relationships | `--visualize`, `--export <file>` |
@@ -576,6 +674,218 @@ module.exports = {
     verbose: false
   }
 };
+```
+
+## 🔍 New Commands Deep Dive
+
+### `zodkit create` - Interactive Schema Builder
+
+Build Zod schemas step-by-step with interactive prompts:
+
+```bash
+# Launch interactive builder
+zodkit create
+
+# Pre-configure name and output
+zodkit create --name UserProfile --output src/schemas/user.schema.ts
+```
+
+**Features:**
+- **Predefined templates**: 7 ready-to-use templates (User, Product, Post, Comment, Address, API Response, Pagination)
+- **15+ field types**: string, number, boolean, date, email, URL, UUID, array, object, enum, union, record, etc.
+- **Field validations**: min/max, regex patterns, custom refinements
+- **Optional/nullable**: Configure field optionality
+- **Live preview**: See generated code before saving
+- **Auto type inference**: TypeScript types automatically generated
+
+**Available Templates:**
+- **user** - User profile with authentication (id, email, username, password, firstName, lastName, avatar, timestamps)
+- **product** - E-commerce product (id, name, description, price, category, tags, stock, image)
+- **post** - Blog post (id, title, slug, content, excerpt, author, published status, tags, timestamps)
+- **comment** - Comment/reply (id, postId, authorId, content, parentId, timestamp)
+- **address** - Physical address (street, city, state, zipCode, country)
+- **apiResponse** - API response wrapper (success, data, error, code, timestamp)
+- **pagination** - Pagination metadata (page, pageSize, totalPages, totalItems, hasNext, hasPrevious)
+
+**Using Templates:**
+```bash
+# Use a template via CLI
+zodkit create --template user --name UserProfile --output src/schemas/user.schema.ts
+
+# Or choose interactively
+zodkit create
+? How would you like to create your schema?
+  ❯ Start from a template
+    Start from scratch
+? Choose a template:
+  ❯ User - User profile with authentication fields
+    Product - E-commerce product schema
+    Post - Blog post schema
+    ...
+```
+
+**Building from Scratch:**
+```
+? Schema name: UserProfile
+? Schema description: User profile information
+? Add field? Yes
+? Field name: email
+? Field type: Email
+? Optional field? No
+? Nullable field? No
+? Add validations? No
+? Field description: User's email address
+
+📋 Generated Schema:
+────────────────────────────────────────
+import { z } from 'zod';
+
+/**
+ * User profile information
+ */
+export const UserProfile = z.object({
+  /** User's email address */
+  email: z.string().email(),
+});
+
+export type UserProfile = z.infer<typeof UserProfile>;
+────────────────────────────────────────
+```
+
+### `zodkit lint` - Schema Linting
+
+Lint schemas for best practices and anti-patterns:
+
+> ⚠️ **Note**: Auto-fix (`--fix`) has known limitations with overlapping fixes and should be used with caution. Lint detection works perfectly.
+
+```bash
+# Lint all schemas
+zodkit lint
+
+# Lint specific patterns
+zodkit lint "src/schemas/**/*.ts"
+
+# Auto-fix safe issues (experimental - use with caution)
+zodkit lint --fix
+
+# Filter by severity
+zodkit lint --severity error
+
+# JSON output
+zodkit lint --format json --output lint-report.json
+```
+
+**Built-in rules:**
+- `require-description` - Schemas should have `.describe()` or `.meta()`
+- `prefer-meta` - Prefer `.meta()` over `.describe()`
+- `no-any-type` - Avoid `z.any()` for type safety
+- `prefer-discriminated-union` - Use discriminated unions for better performance
+- `no-loose-objects` - Avoid `.passthrough()` and loose `.catchall()`
+- `require-refinements` - Suggest refinements for complex validation
+
+**Example output:**
+```
+📋 Linting 12 schema files...
+
+❌ src/schemas/user.schema.ts:5:1
+  Rule: require-description
+  Severity: error
+  Message: Schema "UserSchema" is missing a description
+  Suggestions:
+    • Add .describe() to document the schema purpose
+    • Use .meta() to add structured metadata
+
+⚠️  src/schemas/api.schema.ts:10:1
+  Rule: no-loose-objects
+  Severity: warning
+  Message: Loose object definition: Uses .passthrough()
+  Suggestions:
+    • Define explicit properties
+    • Document why passthrough is needed
+
+Total issues: 2 (1 error, 1 warning)
+```
+
+### `zodkit stats` - Schema Statistics
+
+Generate comprehensive statistics about your schemas:
+
+```bash
+# Analyze all schemas
+zodkit stats
+
+# Specific patterns
+zodkit stats "src/**/*.schema.ts"
+
+# JSON output
+zodkit stats --format json --output stats.json
+
+# Skip analysis
+zodkit stats --no-complexity --no-patterns --no-hotspots
+```
+
+**Metrics:**
+- **Type distribution**: Count schemas by type (object, array, string, etc.)
+- **Complexity metrics**: Average/max depth, field counts, refinements, transforms
+- **Usage patterns**: Email validation, URL validation, UUID, optional fields, etc.
+- **Hotspots**: Schemas with potential issues (missing descriptions, z.any(), deep nesting)
+- **Recommendations**: Actionable suggestions for improvement
+
+**Example output:**
+```
+📊 Schema Statistics
+
+Total Schemas: 24
+
+📈 Type Distribution:
+  object:  18
+  array:   4
+  string:  2
+
+🔢 Complexity Metrics:
+  Average Depth:       2.3
+  Max Depth:           5
+  Average Fields:      8.5
+  Max Fields:          23
+  Total Refinements:   12
+  Total Transforms:    3
+
+🎯 Usage Patterns:
+  Email validation:    8 schemas
+  URL validation:      5 schemas
+  UUID validation:     12 schemas
+  Optional fields:     18 schemas
+  Custom refinements:  12 schemas
+
+🔥 Hotspots (3):
+  HIGH: ComplexUserSchema (src/schemas/user.schema.ts)
+    • Deep nesting (5 levels)
+    • Many fields (23)
+    • Missing description
+    Suggestions:
+      - Consider flattening the schema
+      - Split into multiple smaller schemas
+      - Add .describe() to document purpose
+
+📦 Bundle Impact (Estimated):
+  Total size:          18.5 KB
+
+  Largest schemas (top 5):
+    ComplexUserSchema: 2.15 KB
+      Deep nesting, Many fields, Complex refinements
+    ApiResponseSchema: 1.42 KB
+      Data transformations, Many fields
+    ProductSchema: 0.98 KB
+      Complex refinements
+
+  Optimization tips:
+    • Consider lazy loading schemas with refinements - they add significant bundle size
+    • Transforms are expensive - consider using .preprocess() or moving logic to application layer
+    • Largest schema (ComplexUserSchema) could be split into smaller, more focused schemas
+
+💡 Recommendations:
+  • 6 schema(s) missing descriptions - add .describe() calls
+  • 2 complex schema(s) detected - consider refactoring
 ```
 
 ## 🎯 Real-World Examples

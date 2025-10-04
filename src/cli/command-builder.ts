@@ -246,6 +246,13 @@ export const CommandConfigs = {
 			.option('--port <n>', 'server port', '3456'),
 
 	// Basic commands
+	create: () =>
+		createCommand('create', 'Interactive schema builder with step-by-step prompts', 'generation')
+			.option('-o, --output <path>', 'output file path')
+			.option('--name <name>', 'schema name')
+			.option('--template <template>', 'use a predefined template (user, product, post, comment, address, apiResponse, pagination)')
+			.option('--no-interactive', 'disable interactive mode'),
+
 	fix: () =>
 		createCommand('fix', 'Automatically fix schema issues')
 			.argument('[schema]', 'specific schema to fix')
@@ -349,6 +356,17 @@ export const CommandConfigs = {
 			.option('--baseline', 'save results as performance baseline')
 			.option('--compare', 'compare with saved baseline')
 			.option('--memory', 'include memory usage analysis', true),
+
+	stats: () =>
+		createCommand('stats', 'Generate comprehensive schema statistics and analysis', 'analysis')
+			.argument('[patterns...]', 'file patterns to analyze')
+			.option('--output <path>', 'output file for statistics report')
+			.option('--format <format>', 'output format: text, json', 'text')
+			.option('--verbose', 'show detailed information')
+			.option('--no-complexity', 'skip complexity analysis')
+			.option('--no-patterns', 'skip usage pattern analysis')
+			.option('--no-hotspots', 'skip hotspot detection')
+			.option('--no-bundle-impact', 'skip bundle impact analysis'),
 
 	// Smart aliases
 	gen: () =>

@@ -29,6 +29,7 @@ const lazyImport = (importFn: () => Promise<any>) => {
 };
 
 // Heavy commands with lazy loading for tree-shaking
+const createCommand = lazyImport(() => import('./commands/create'));
 const generateCommand = lazyImport(() => import('./commands/generate'));
 const scaffoldCommand = lazyImport(() => import('./commands/scaffold'));
 const mockCommand = lazyImport(() => import('./commands/mock'));
@@ -37,6 +38,7 @@ const testCommand = lazyImport(() => import('./commands/test'));
 const migrateCommand = lazyImport(() => import('./commands/migrate'));
 const diffCommand = lazyImport(() => import('./commands/diff'));
 const lintCommand = lazyImport(() => import('./commands/lint'));
+const statsCommand = lazyImport(() => import('./commands/stats'));
 // Temporarily disabled - commands not yet implemented
 // const refactorCommand = lazyImport(() => import('./commands/refactor'));
 // const transformCommand = lazyImport(() => import('./commands/transform'));
@@ -86,6 +88,7 @@ ${pc.cyan('Core Commands (19 total):')}
   ${pc.gray('$')} zodkit fix                # Auto-fix schema issues
   ${pc.gray('$')} zodkit hint               # Best practice suggestions
   ${pc.gray('$')} zodkit test               # Test schemas with fuzzing
+  ${pc.gray('$')} zodkit create             # Interactive schema builder
   ${pc.gray('$')} zodkit generate           # Generate schemas from data
   ${pc.gray('$')} zodkit scaffold           # Scaffold from TypeScript
   ${pc.gray('$')} zodkit docs               # Generate documentation
@@ -134,6 +137,7 @@ program.addCommand(CommandConfigs.hint().action(hintCommand).build());
 program.addCommand(CommandConfigs.profile().action(analyzeCommand).build());
 
 // Generation Commands
+program.addCommand(CommandConfigs.create().action(createCommand).build());
 program.addCommand(CommandConfigs.scaffold().action(scaffoldCommand).build());
 program.addCommand(CommandConfigs.generate().action(generateCommand).build());
 program.addCommand(CommandConfigs.mock().action(mockCommand).build());
@@ -146,6 +150,7 @@ program.addCommand(CommandConfigs.contract().action(contractCommand).build());
 program.addCommand(CommandConfigs.migrate().action(migrateCommand).build());
 program.addCommand(CommandConfigs.diff().action(diffCommand).build());
 program.addCommand(CommandConfigs.lint().action(lintCommand).build());
+program.addCommand(CommandConfigs.stats().action(statsCommand).build());
 // Temporarily disabled - commands not yet implemented
 // program.addCommand(CommandConfigs.refactor().action(refactorCommand).build());
 // program.addCommand(CommandConfigs.compose().action(composeCommand).build());

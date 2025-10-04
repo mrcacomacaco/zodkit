@@ -98,6 +98,10 @@
 	},
 	"homepage": "https://github.com/JSONbored/zodkit#readme",
 	"dependencies": {
+		"@inquirer/confirm": "^5.1.18",
+		"@inquirer/input": "^4.2.4",
+		"@inquirer/prompts": "^7.8.6",
+		"@inquirer/select": "^4.3.4",
 		"commander": "^14.0.1",
 		"fast-glob": "^3.3.3",
 		"glob": "^11.0.3",
