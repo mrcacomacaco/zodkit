@@ -99,13 +99,13 @@ export class IgnoreParser {
 	}
 
 	private addPattern(pattern: string): void {
-		// Convert glob pattern to regex - properly escape backslashes first
+		// Convert glob pattern to regex - escape backslashes first to prevent injection
 		const regex = pattern
-			.replaceAll('\\', '\\\\')
-			.replaceAll('.', '\\.')
-			.replaceAll('*', '.*')
-			.replaceAll('?', '.')
-			.replaceAll(/\{([^}]+)\}/g, '($1)');
+			.replace(/\\/g, '\\\\') // Escape backslashes first!
+			.replace(/\./g, '\\.')
+			.replace(/\*/g, '.*')
+			.replace(/\?/g, '.')
+			.replace(/\{([^}]+)\}/g, '($1)');
 
 		this.patterns.push(new RegExp(`^${regex}$`));
 	}
