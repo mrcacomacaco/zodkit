@@ -447,22 +447,7 @@ program.addCommand(
 				return;
 			}
 
-			// For demo, create a simple test schema and data
-			const { z } = await import('zod');
-			const testSchema = z.object({
-				id: z.string().uuid(),
-				email: z.string().email(),
-				age: z.number().min(0).max(150),
-				name: z.string().min(1).max(100),
-			});
-
-			const testData = Array.from({ length: 1000 }, (_, i) => ({
-				id: `550e8400-e29b-41d4-a716-44665544${i.toString().padStart(4, '0')}`,
-				email: `user${i}@example.com`,
-				age: Math.floor(Math.random() * 80) + 18,
-				name: `User ${i}`,
-			}));
-
+			// Run performance benchmark
 			await runPerformanceBenchmark();
 
 			if (options.baseline) {

@@ -3,7 +3,7 @@
  * @module MCPCommand
  */
 
-import { existsSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import * as pc from 'picocolors';
 import { ConfigManager } from '../../core/config';
 import { MCPServer } from '../../core/infrastructure';
