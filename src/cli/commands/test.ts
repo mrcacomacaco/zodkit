@@ -374,10 +374,7 @@ async function generateTestData(
 	}
 }
 
-async function runBenchmarks(
-	tester: SchemaTester,
-	discovery: SchemaDiscovery,
-): Promise<void> {
+async function runBenchmarks(tester: SchemaTester, discovery: SchemaDiscovery): Promise<void> {
 	console.log(pc.cyan('\n⚡ Running schema performance benchmarks...'));
 
 	const schemas = await discovery.findSchemas({ useCache: true });
@@ -583,10 +580,7 @@ async function runTestSuite(tester: SchemaTester, options: TestCommandOptions): 
 	}
 }
 
-async function runInteractiveMode(
-	tester: SchemaTester,
-	discovery: SchemaDiscovery,
-): Promise<void> {
+async function runInteractiveMode(tester: SchemaTester, discovery: SchemaDiscovery): Promise<void> {
 	console.log(pc.cyan('\n🎮 Interactive Testing Mode'));
 	console.log(pc.gray('Choose options for comprehensive schema testing\n'));
 

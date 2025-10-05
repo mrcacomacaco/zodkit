@@ -67,12 +67,7 @@ process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 
 ${content}`;
 
-		fs.writeFileSync(cliIndexPath, optimized);
-		try {
-			fs.chmodSync(cliIndexPath, 0o755);
-		} catch (error) {
-			if (error.code !== 'ENOENT') throw error;
-		}
+		fs.writeFileSync(cliIndexPath, optimized, { mode: 0o755 });
 		console.log('✅ Optimized CLI entry point');
 	} catch (error) {
 		console.log('⚠️  Could not optimize CLI entry point:', error.message);

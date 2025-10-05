@@ -108,7 +108,10 @@ async function initializeProject(
 		}
 	} catch (error: any) {
 		// File doesn't exist, which is fine for initialization
-		if (error.code !== 'ENOENT' && error.message !== 'Project already initialized. Use --force to reinitialize.') {
+		if (
+			error.code !== 'ENOENT' &&
+			error.message !== 'Project already initialized. Use --force to reinitialize.'
+		) {
 			throw error;
 		}
 		if (error.message === 'Project already initialized. Use --force to reinitialize.') {

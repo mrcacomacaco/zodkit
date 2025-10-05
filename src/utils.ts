@@ -105,7 +105,11 @@ export class IgnoreParser {
 			.replace(/\./g, '\\.')
 			.replace(/\*/g, '.*')
 			.replace(/\?/g, '.')
-			.replace(/\{([^}]+)\}/g, '($1)');
+			.replace(/\{([^}]+)\}/g, (_match, group) => {
+				// Escape regex metacharacters in brace expansion content
+				const escaped = group.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+				return `(${escaped})`;
+			});
 
 		this.patterns.push(new RegExp(`^${regex}$`));
 	}

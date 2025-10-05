@@ -36,6 +36,8 @@ export function createTestSchema(name: string, definition: any = {}) {
 		filePath: `test-schemas/${name}.ts`,
 		schemaType: 'object',
 		complexity: Object.keys({ ...defaultDefinition, ...definition }).length,
+		line: 1,
+		column: 0,
 	};
 }
 

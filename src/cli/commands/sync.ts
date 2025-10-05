@@ -70,9 +70,10 @@ async function showSyncStatus(
 	console.log(pc.cyan('\n📊 Schema Sync Status'));
 
 	try {
-		const conflicts = typeof (discovery as any).getConflicts === 'function'
-			? await (discovery as any).getConflicts()
-			: [];
+		const conflicts =
+			typeof (discovery as any).getConflicts === 'function'
+				? await (discovery as any).getConflicts()
+				: [];
 		const schemas = await discovery.findSchemas({ useCache: true });
 
 		console.log(`   ${pc.gray('Total schemas:')} ${schemas.length}`);

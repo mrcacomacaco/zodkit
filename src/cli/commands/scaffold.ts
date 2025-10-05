@@ -65,9 +65,7 @@ export async function scaffoldCommand(
 
 		// Custom patterns feature not yet implemented
 		if (options.customPatterns && !options.quiet && !options.json) {
-			console.warn(
-				pc.yellow('⚠ Warning: Custom patterns feature is not yet implemented'),
-			);
+			console.warn(pc.yellow('⚠ Warning: Custom patterns feature is not yet implemented'));
 		}
 
 		// Initialize scaffold engine (ScaffoldEngine doesn't take constructor args)
@@ -125,7 +123,7 @@ async function runSingleGeneration(
 		if (!options.quiet && !options.json) {
 			console.log(pc.yellow('⚠ No schemas found in the input file'));
 			if (result.warnings.length > 0) {
-				result.warnings.forEach(w => console.log(pc.gray(`  ${w}`)));
+				result.warnings.forEach((w) => console.log(pc.gray(`  ${w}`)));
 			}
 		}
 		return;
@@ -155,7 +153,7 @@ async function runSingleGeneration(
 			console.log(pc.gray(`  Time: ${result.metadata.timeElapsed}ms`));
 			if (result.warnings.length > 0) {
 				console.log(pc.yellow(`\n⚠ Warnings:`));
-				result.warnings.forEach(w => console.log(pc.gray(`  ${w}`)));
+				result.warnings.forEach((w) => console.log(pc.gray(`  ${w}`)));
 			}
 		}
 

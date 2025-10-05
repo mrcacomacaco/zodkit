@@ -574,14 +574,15 @@ export class SchemaCache {
 
 	private watchDependencies(_key: string, dependencies: string[]): void {
 		dependencies.forEach((dep) => {
-			if (fs.existsSync(dep) && !this.fileWatchers.has(dep)) {
+			if (!this.fileWatchers.has(dep)) {
 				try {
+					// Directly attempt to watch - fs.watch will fail if file doesn't exist
 					const watcher = fs.watch(dep, () => {
 						this.invalidateDependency(dep);
 					});
 					this.fileWatchers.set(dep, watcher);
 				} catch {
-					// File watching may fail in some environments, continue without it
+					// File watching may fail in some environments or if file doesn't exist, continue without it
 				}
 			}
 		});

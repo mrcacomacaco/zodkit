@@ -417,9 +417,10 @@ program.addCommand(
 						process.exit(1);
 				}
 			} catch (error) {
-				console.error(pc.red(`Plugin management failed: ${error}`));
-				if (globalOpts.verbose) {
-					console.error(error);
+				const errorMsg = error instanceof Error ? error.message : String(error);
+				console.error(pc.red(`Plugin management failed: ${errorMsg}`));
+				if (globalOpts.verbose && error instanceof Error && error.stack) {
+					console.error(error.stack);
 				}
 				process.exit(1);
 			}

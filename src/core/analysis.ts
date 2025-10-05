@@ -497,7 +497,9 @@ export class Analyzer {
 
 	private matchesPattern(name: string, patterns: string[]): boolean {
 		return patterns.some((pattern) => {
-			const regex = new RegExp(pattern.replaceAll('*', '.*'));
+			// Escape all regex metacharacters except *, then replace * with .*
+			const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+			const regex = new RegExp(`^${escaped}$`);
 			return regex.test(name);
 		});
 	}
