@@ -1,8 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Question or Discussion
-    url: https://github.com/JSONbored/zodkit/discussions
-    about: Ask questions and discuss ideas with the community
-  - name: Security Issues
-    url: https://github.com/JSONbored/zodkit/security/advisories/new
-    about: Report security vulnerabilities privately
